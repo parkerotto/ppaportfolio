@@ -15,8 +15,8 @@ Advanced spatial analysis and data science for urban planning and public policy.
 - **Final Project:** Capstone modeling challenge
 
 ## About Me
-[Students will customize this section]
+My name is Parker Otto.  I'm a 1st Year MCP student at UPenn interested in urban spatial history.  My background is in spatial history and urban GIS at UChicago.  I'm taking this course to deepen my understanding of urban datasets and analysis.
 
 ## Contact
-- Email: [your.email@upenn.edu]
-- GitHub: [@your-username]
+- Email: [pekotto@upenn.edu]
+- GitHub: [@parkerotto]
