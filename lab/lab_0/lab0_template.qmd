@@ -8,7 +8,7 @@ format:
     code-fold: false
     toc: true
     toc-location: left
-    theme: cosmo
+    theme: darkly
 execute:
   warning: false
   message: false

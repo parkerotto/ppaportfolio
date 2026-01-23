@@ -8,10 +8,22 @@ website:
     left:
       - href: index.qmd
         text: Home
+      - text: Labs
+        menu:
+          - href: lab/lab_0/lab0_template.qmd
+            text: "Lab 0: dplyr Basics"
+      - text: Weekly Notes
+        menu: 
+          - href: weekly-notes/
+            text: "Coming Soon!"
+      - text: Final Project
+        menu:
+          - href: final/
+            text: "Coming Soon!"
 
 format:
   html:
-    theme: cosmo
+    theme: darkly
     toc: true
     code-fold: true
 
