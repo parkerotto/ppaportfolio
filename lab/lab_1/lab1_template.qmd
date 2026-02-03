@@ -53,12 +53,21 @@ If there is a special character like a colon, you need use double quote mark so 
 ```{r setup}
 # Load required packages (hint: you need tidycensus, tidyverse, and knitr)
 
+library(tidycensus)
+library(tidyverse)
+library(knitr)
+
 # Set your Census API key
 
+census_api_key("a05b265afea2fb4dfbd350edadaf50fb30255de8")
+
 # Choose your state for analysis - assign it to a variable called my_state
+
+my_state <- "Missouri"
+
 ```
 
-**State Selection:** I have chosen **[Your State Name]** for this analysis because: [Brief explanation of why you chose this state]
+**State Selection:** I have chosen **Missouri** for this analysis because: I am originally from Missouri, but I don't really know much about its demographics (especially outside of the southeastern region) so I think I could learn a lot from this assignment.
 
 # Part 2: County-Level Resource Assessment
 
@@ -78,10 +87,25 @@ If there is a special character like a colon, you need use double quote mark so 
 ```{r county-data}
 # Write your get_acs() code here
 
+mo_county_data <- get_acs(
+  geography = "county",
+  variables = c(
+    med_hh_inc = "B19013_001", 
+    total_pop = "B01003_001"
+  ),
+  state = "MO",
+  year = 2022,
+  survey = "acs5",
+  output = "wide"
+)
+
 # Clean the county names to remove state name and "County" 
 # Hint: use mutate() with str_remove()
 
 # Display the first few rows
+
+head(mo_county_data)
+
 ```
 
 ## 2.2 Data Quality Assessment
@@ -101,8 +125,29 @@ If there is a special character like a colon, you need use double quote mark so 
 ```{r income-reliability}
 # Calculate MOE percentage and reliability categories using mutate()
 
+mo_clean <- mo_county_data %>% 
+  mutate(
+    county_name = str_remove(NAME, ", Missouri"),
+    county_name = str_remove(county_name, " County"),
+    county_name = str_replace(county_name, " city", " City")
+  )
+
+mo_reliability <- mo_clean %>% 
+  mutate(
+    moe_percentage = round((med_hh_incM / med_hh_incE) * 100, 2),
+    reliability = case_when(
+      moe_percentage < 5 ~ "High Confidence",
+      moe_percentage >= 5 & moe_percentage <= 10 ~ "Moderate Confidence",
+      moe_percentage > 10 ~ "Low Confidence"
+    )
+  )
+
+
 # Create a summary showing count of counties in each reliability category
 # Hint: use count() and mutate() to add percentages
+
+count(mo_reliability, reliability)
+
 ```
 
 ## 2.3 High Uncertainty Counties
@@ -120,12 +165,31 @@ If there is a special character like a colon, you need use double quote mark so 
 ```{r high-uncertainty}
 # Create table of top 5 counties by MOE percentage
 
+high_uncertainty <- mo_reliability %>% 
+  filter(moe_percentage > 10) %>% 
+  arrange(desc(moe_percentage)) %>% 
+  select(county_name, med_hh_incE, moe_percentage) %>% 
+  slice_head(n = 5)
+
 # Format as table with kable() - include appropriate column names and caption
+
+kable(high_uncertainty,
+  col.names = c(
+    "County",
+    "Median Income",
+    "MOE %"
+  ),
+  caption = "Missouri Counties With Highest Median Income Data Uncertainty",
+  format.args = list(big.mark = ".")
+)
+
 ```
 
 **Data Quality Commentary:**
 
 [Write 2-3 sentences explaining what these results mean for algorithmic decision-making. Consider: Which counties might be poorly served by algorithms that rely on this income data? What factors might contribute to higher uncertainty?]
+
+This list of the top 5 most uncertain counties for median income data appears to be populated by counties in the bottom half of state-wide county median incomes.  This could be due to unreliable methods for data collection (such as poor digital, educational, or physical infrastructure making responses to the ACS delayed or inaccurate.  This implies that poorer counties would be disproportionately impacted by any algorithms that rely on this median income data to make decisions.  
 
 # Part 3: Neighborhood-Level Analysis
 
