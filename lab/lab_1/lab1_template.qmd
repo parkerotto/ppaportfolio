@@ -1,14 +1,14 @@
 ---
 title: "Lab 1: Census Data Quality for Policy Decisions"
 subtitle: "Evaluating Data Reliability for Algorithmic Decision-Making"
-author: "Your Name Here"
+author: "Parker Otto"
 date: today
 format: 
   html:
     code-fold: false
     toc: true
     toc-location: left
-    theme: cosmo
+    theme: darkly
 execute:
   warning: false
   message: false
@@ -102,9 +102,17 @@ mo_county_data <- get_acs(
 # Clean the county names to remove state name and "County" 
 # Hint: use mutate() with str_remove()
 
+
+mo_clean <- mo_county_data %>% 
+  mutate(
+    county_name = str_remove(NAME, ", Missouri"),
+    county_name = str_remove(county_name, " County"),
+    county_name = str_replace(county_name, " city", " City")
+  )
+
 # Display the first few rows
 
-head(mo_county_data)
+head(mo_clean)
 
 ```
 
@@ -124,13 +132,6 @@ head(mo_county_data)
 
 ```{r income-reliability}
 # Calculate MOE percentage and reliability categories using mutate()
-
-mo_clean <- mo_county_data %>% 
-  mutate(
-    county_name = str_remove(NAME, ", Missouri"),
-    county_name = str_remove(county_name, " County"),
-    county_name = str_replace(county_name, " city", " City")
-  )
 
 mo_reliability <- mo_clean %>% 
   mutate(
@@ -203,11 +204,34 @@ This list of the top 5 most uncertain counties for median income data appears to
 # Use filter() to select 2-3 counties from your county_reliability data
 # Store the selected counties in a variable called selected_counties
 
+selected_counties <- mo_reliability %>% 
+  filter(
+    county_name %in% c(
+      "Ste. Genevieve",
+      "Jefferson",
+      "Iron"
+      )
+  ) %>% 
+  select(county_name, med_hh_incE, moe_percentage, reliability)
+
 # Display the selected counties with their key characteristics
 # Show: county name, median income, MOE percentage, reliability category
+
+kable(selected_counties,
+  col.names = c(
+    "County",
+    "Median Income",
+    "MOE %",
+    "Reliability Category"
+  ),
+  caption = "Selected Missouri Counties",
+  format.args = list(big.mark = ".")
+)
+
 ```
 
-**Comment on the output:** [write something :)]
+**Comment on the output:** 
+The counties I selected are in a contiguous line beginning in Jefferson County (the outside southern edge of the St. Louis metro area), continuing south to Ste. Gen, and then south-west to Iron.  Based on my experience living there, the quality of life in these counties is lower the further from St. Louis one is (Jefferson highest, Iron lowest).  This matches the declining median incomes shown in this table as well as the declining reliability of the ACS data.
 
 ## 3.2 Tract-Level Demographics
 
@@ -222,14 +246,45 @@ This list of the top 5 most uncertain counties for median income data appears to
 
 ```{r tract-demographics}
 # Define your race/ethnicity variables with descriptive names
-
 # Use get_acs() to retrieve tract-level data
 # Hint: You may need to specify county codes in the county parameter
+
+acs_vars_2022 <- load_variables(2022, "acs5", cache = TRUE)
+
+mo_tract_data <- get_acs(
+  geography = "tract",
+  variables = c(
+    white_alone = "B03002_003", 
+    black = "B03002_004",
+    latino = "B03002_012",
+    total_pop = "B03002_001"
+  ),
+  state = "MO",
+  county = c("099", "186", "093"),
+  year = 2022,
+  survey = "acs5",
+  output = "wide",
+  show_call = TRUE
+)
 
 # Calculate percentage of each group using mutate()
 # Create percentages for white, Black, and Hispanic populations
 
+race_pct <- mo_tract_data %>% 
+  mutate(
+    white_share = (white_aloneE / total_popE) * 100,
+    black_share = (blackE / total_popE) * 100,
+    latino_share = (latinoE / total_popE) * 100
+  )
+
 # Add readable tract and county name columns using str_extract() or similar
+
+tract_clean <- race_pct %>% 
+  mutate(
+    county_name = str_extract(NAME, "(?<=; )[^;]+(?= County)"),
+    tract_name = str_extract(NAME, "([0-9.]+)")
+  )
+
 ```
 
 ## 3.3 Demographic Analysis
@@ -240,10 +295,37 @@ This list of the top 5 most uncertain counties for median income data appears to
 # Find the tract with the highest percentage of Hispanic/Latino residents
 # Hint: use arrange() and slice() to get the top tract
 
+highest_latino <- tract_clean %>% 
+  arrange(desc(latino_share)) %>% 
+  slice_head(n = 1)
+
 # Calculate average demographics by county using group_by() and summarize()
 # Show: number of tracts, average percentage for each racial/ethnic group
 
+county_avg_dem <- tract_clean %>% 
+  group_by(county_name) %>% 
+  summarize(
+    tract_count = n(),
+    avg_latino_pct = mean(latino_share, na.rm = TRUE),
+    avg_black_pct = mean(black_share, na.rm = TRUE),
+    avg_white_pct = mean(white_share, na.rm = TRUE)
+  )
+
 # Create a nicely formatted table of your results using kable()
+
+kable(
+  county_avg_dem,
+  col.names = c(
+    "County",
+    "Tract Count",
+    "Avg. % of Pop. Latino",
+    "Avg. % of Pop. Black",
+    "Avg. % of Pop. White"
+  ),
+  caption = "Average Census Tract Racial Group Percent Share By County",
+  format.args = list(big.mark = ".")
+)
+
 ```
 
 # Part 4: Comprehensive Data Quality Evaluation
@@ -261,10 +343,34 @@ This list of the top 5 most uncertain counties for median income data appears to
 # Calculate MOE percentages for white, Black, and Hispanic variables
 # Hint: use the same formula as before (margin/estimate * 100)
 
+racial_reliability <- tract_clean %>% 
+  mutate(
+    white_moe_pct = round((white_aloneM / white_aloneE) * 100, 2),
+    black_moe_pct = round((blackM / blackE) * 100, 2),
+    latino_moe_pct = round((latinoM / latinoE) * 100, 2)
+  )
+
 # Create a flag for tracts with high MOE on any demographic variable
 # Use logical operators (| for OR) in an ifelse() statement
 
+racial_reliability <- racial_reliability %>% 
+  mutate(
+    high_moe = ifelse(
+      white_moe_pct > 100 | black_moe_pct > 100 | latino_moe_pct > 100,
+      "Crazy High (>100%)",
+      "High (>15%)"
+    )
+  )
+
 # Create summary statistics showing how many tracts have data quality issues
+
+tract_reliability_sumstats <- racial_reliability %>% 
+  group_by(high_moe) %>% 
+  summarize(
+    tract_count = n()
+  )
+tract_reliability_sumstats
+
 ```
 
 ## 4.2 Pattern Analysis
@@ -275,12 +381,38 @@ This list of the top 5 most uncertain counties for median income data appears to
 # Group tracts by whether they have high MOE issues
 # Calculate average characteristics for each group:
 # - population size, demographic percentages
-
 # Use group_by() and summarize() to create this comparison
+
+by_moe_issues <- racial_reliability %>% 
+  filter(black_moe_pct < 10000000000 & latino_moe_pct < 10000000000) %>% #remove infinite values caused by dividing by 0 earlier
+  group_by(high_moe) %>% 
+  summarise(
+    num_tracts = n(),
+    avg_pop = mean(total_popE),
+    avg_white_pct = mean(white_share, na.rm = TRUE),
+    avg_black_pct = mean(black_share, na.rm = TRUE),
+    avg_latino_pct = mean(latino_share, na.rm = TRUE)
+  )
+
 # Create a professional table showing the patterns
+
+kable(
+  by_moe_issues,
+  col.names = c(
+    "MOE %",
+    "Tracts W/O Infinite Values (Out of 58)",
+    "Avg. Pop. Count",
+    "Avg. % of Pop. White",
+    "Avg. % of Pop. Black",
+    "Avg. % of Pop. Latino"
+  ),
+  caption = "Average Census Tract Racial Group Percent For High and Crazy-High MOE Tracts",
+  format.args = list(big.mark = ".")
+)
+
 ```
 
-**Pattern Analysis:** [Describe any patterns you observe. Do certain types of communities have less reliable data? What might explain this?]
+**Pattern Analysis:** According to the table created through the methods described above, tracts that have high margin of error percentages (under 100%, because the lowest MOE% for Latino and Black population estimates was 50%) have on average a 3% lower share in their white population.  They also have about double the Black population and a comparable (but slightly lower by 0.12%) Latino share).  The real pattern emerges when inspecting the margins of error by race.  White populations have low (sub-15%) MOEs while Black and Latino populations are, as mentioned before, always more than 50% even in tracts where they make up a larger share (e.g. 7001.23 where Latinos make up ~16% of the population but still have a MOE of ~81%).
 
 
 # Part 5: Policy Recommendations
@@ -297,7 +429,13 @@ This list of the top 5 most uncertain counties for median income data appears to
 
 **Executive Summary:**
 
-[Your integrated 4-paragraph summary here]
+Overall, the quality of data in Rural Missouri is quite poor at both the large and small scales, as well as across median income and racial population data samples.  When observing the data at the county level and using median income estimate margin of error percentages as a basis for classifying a county as having "high", "medium", or "low" confidence in the ACS estimation, two patterns become apparent. Spatially, confidence in the ACS estimation of median income declines the further one travels from population centers and high-infrastructure counties.  St. Louis City and all of its surrounding counties within the metropolitan area have high confidence levels in their estimates at this scale, whereas Ste. Genevieve County (one county removed from the metro) has a medium confidence level and Iron county (two counties removed and bordering Ste. Genevieve) has a low confidence.  Population of these counties also show a positive relationship with confidence.
+
+To speculate about the causes of this observed decline in estimate confidence, one reason could be a lack of physical infrastructure.  While I-55 bisects both Ste. Genevieve and Jefferson Counties, there is no interstate present in Iron County (the entire area is serviced only by 1-lane-per-direction state roads).  Additionally, many people in all three counties (although far more in Iron and Ste. Gen than Jefferson) live off of dirt roads and lack access to reliable (if any at all) internet and cellular coverage.  Growing up in this area, this was considered normal (many of my peers would get around by ATV / four-wheeler when roads simply did not exist) and it was not until I moved to Chicago for undergrad that I learned of comparisons of my home region of the Ozarks to Appalachia.  The presence of infrastructure too divides the Ozarks (to the point where those along the I-55 corridor don't even necessarily call themselves Ozarkians, also known as Hillbillies and this is the region where the term originated---although we call them "Hoosiers" in our local dialect, much to the confusion of my friends in undergrad from Indiana).  Needless to say, the lack of digital and physical infrastructure may also have an impact on the area's overall educational attainment.  Since the ACS relies on a small sample of people to answer their survey (which is a very small number of people spread across a large geography), and the area lacks funded educational systems (in part due to its Republican leadership at every level of government, which is constantly threatening to cut funding entirely to libraries and schools that refuse state-sponsored censorship of People of Color and Queer voices) the people receiving ACS surveys may not know how to effectively or accurately fill them out.
+
+At the Census Tract level, even aforementioned high-confidence counties (determined through median income MOE) can show great variation in confidence levels among racial groups.  Latino and Black population estimates are always greater than 50% MOE percent across tracts in Jefferson, Ste. Genevieve, and Iron counties (listed based on distance from St. Louis County, which is the collar county to St. Louis City).  This high MOE percent for people of color is likely due to the extremely low populations of both of these groups.  Black population estimates at the tract level range from 0 to 377 while Latino estimates range from 0 to 498.  The estimates of 0 in these cases also cause a large chunk of the data to be unusable for calculating averages in Part 4.2, as the percentage calculation results in infinite values.  
+
+In terms of recommendations, I am unfortunately pessimistic that the ACS or broader Census could do anything to improve the situation.  The issues of sample size in racial data are due to the fact that, in many of these extremely rural tracts, there just aren't any people of color at all.  Having grown up biracial in this environment, I know first-hand that it is an incredibly hostile culture and environment to live in for people of color and many go out of their way to avoid traveling to (let alone settling down in) these counties.  Education is tough too given that school funding is largely tied to local property values.  While there are small pockets of good public schools in the Ozarks, places like Iron County that have both widespread poverty and a low population will likely never see substantial investment in K-12 education under this system (or even the widely proposed alternative of money-per-student).  Infrastructure, however, is the one area that could be the most feasible to improve both economically and socially.  Having fast internet is, after all, a fairly non-partisan issue.  Roads, too, are quite popular across the isle, but the ever-increasing bill for suburban expansion in the St. Louis and Kansas City metros eats up most of the state budget.  One of these counties, however, (Jefferson) is seeing billions in state and federal infrastructure investment via a highway widening project (2 to 3 lanes one-way) on I-55 that will improve mobility for the region and, therefore, access to opportunity and resources.  Iron County, however, will see none of this.  Partnering with a private company (or even creating a public broadband option, however unlikely that may be in such a ruby red state) could greatly boost the literacy (and therefore potentially the quality of ACS responses) of Iron County.  This would, however, require investment based on humanity and not based on growth or profit, as this area is unlikely to see any migration from the ever-expanding St. Louis Metro (the reason why Jefferson County is getting so much public money right now) unless a brand new interstate were to be built through it (which will, yet again, likely never happen).  One possibility that is completely within the reach of the U.S. Census is to proctor in-person surveys (at a polling place, church, etc).  This way professionals can be available to provide clarity for questions that may be confusing.  This can be paired with expanded sample sizes to further increase confidence in the estimates.
 
 ## 6.3 Specific Recommendations
 
@@ -307,44 +445,136 @@ This list of the top 5 most uncertain counties for median income data appears to
 # Create a summary table using your county reliability data
 # Include: county name, median income, MOE percentage, reliability category
 
+summary_counties <- mo_reliability %>% 
+  select(county_name, med_hh_incE, moe_percentage, reliability)
+
 # Add a new column with algorithm recommendations using case_when():
 # - High Confidence: "Safe for algorithmic decisions"
 # - Moderate Confidence: "Use with caution - monitor outcomes"  
 # - Low Confidence: "Requires manual review or additional data"
 
+alg_summary_counties <- summary_counties %>% 
+  mutate(
+    alg_rec = case_when(
+      reliability == "High Confidence" ~ "1Safe for algorithmic decisions",
+      reliability == "Moderate Confidence" ~ "2Use with caution - monitor outcomes",
+      reliability == "Low Confidence" ~ "3Requires manual review or additional data"
+    )
+  ) %>% 
+  arrange(alg_rec) %>% 
+  mutate(
+    alg_rec = str_remove(alg_rec, "\\d")
+  )
+  
 # Format as a professional table with kable()
+
+
+kable(alg_summary_counties,
+  col.names = c(
+    "County",
+    "Median Income",
+    "MOE %",
+    "Reliability Category",
+    "Algorithm Recommendation"
+  ),
+  caption = "Algorithm Recommendations for Missouri Counties Based on Median Income ACS Estimate Margins of Error",
+  format.args = list(big.mark = ".")
+)
+
 ```
 
 **Key Recommendations:**
 
 **Your Task:** Use your analysis results to provide specific guidance to the department.
 
-1. **Counties suitable for immediate algorithmic implementation:** [List counties with high confidence data and explain why they're appropriate]
+1. **Counties suitable for immediate algorithmic implementation:** 
 
-2. **Counties requiring additional oversight:** [List counties with moderate confidence data and describe what kind of monitoring would be needed]
+The following counties are suitable for immediate algorithmic implementation based on having ACS median income estimate margin of error percentages less than 5%.
 
-3. **Counties needing alternative approaches:** [List counties with low confidence data and suggest specific alternatives - manual review, additional surveys, etc.]
+```{r}
+
+hc_list <- alg_summary_counties %>% 
+  filter(
+    reliability == "High Confidence"
+  ) %>% 
+  select(county_name)
+
+kable(hc_list,
+  col.names = c(
+    "County Name"
+  ),
+  caption = "Missouri Counties Suitable For Algorithms",
+  format.args = list(big.mark = ".")
+)
+
+```
+
+2. **Counties requiring additional oversight:** 
+
+The following counties are suitable for cautious algorithmic implementation based on having ACS median income estimate margin of error percentages between 5% and 10%.  Monitoring can look like human review if algorithmic results go beyond a certain "expected" threshold (depending on the algorithm's intended effect and outputs).
+
+```{r}
+
+mc_list <- alg_summary_counties %>% 
+  filter(
+    reliability == "Moderate Confidence"
+  ) %>% 
+  select(county_name)
+
+kable(mc_list,
+  col.names = c(
+    "County Name"
+  ),
+  caption = "Missouri Counties Requiring Monitoring",
+  format.args = list(big.mark = ".")
+)
+
+```
+
+3. **Counties needing alternative approaches:** 
+
+The following counties are not suitable for algorithmic implementation based on having ACS median income estimate margin of error percentages greater than 10%.  Manual review is required of any outputs from an algorithm.  Recommended feasible interventions for the ACS are in-person guided surveys (to counteract internet infrastructure deficiencies) along with expanded sample sizes (to decrease some uncertainty).
+
+```{r}
+
+lc_list <- alg_summary_counties %>% 
+  filter(
+    reliability == "Low Confidence"
+  ) %>% 
+  select(county_name)
+
+kable(lc_list,
+  col.names = c(
+    "County Name"
+  ),
+  caption = "Missouri Counties Requiring Manual Review",
+  format.args = list(big.mark = ".")
+)
+
+```
 
 ## Questions for Further Investigation
 
-[List 2-3 questions that your analysis raised that you'd like to explore further in future assignments. Consider questions about spatial patterns, time trends, or other demographic factors.]
+1. While I have some local knowledge of these areas' infrastructure and culture having grown up there, it would be interesting to see if my hunch of infrastructure presence and access to education and broadband hold up quantitatively.  
+
+2. It would also be interesting to spatialize these results (especially at the tract level) to see if there is any spatial autocorrelation for certainty categories (again, based on my local knowledge and a quick look at the counties, this does appear to be the case).
 
 # Technical Notes
 
 **Data Sources:** 
 - U.S. Census Bureau, American Community Survey 2018-2022 5-Year Estimates
-- Retrieved via tidycensus R package on [date]
+- Retrieved via tidycensus R package on 2-9-2026
 
 **Reproducibility:** 
-- All analysis conducted in R version [your version]
+- All analysis conducted in R version 4.3.1 (2023-06-16)
 - Census API key required for replication
-- Complete code and documentation available at: [your portfolio URL]
+- Complete code and documentation available at: https://parkerotto.github.io/ppaportfolio/lab/lab_1/lab1_template.html
 
 **Methodology Notes:**
-[Describe any decisions you made about data processing, county selection, or analytical choices that might affect reproducibility]
+Given the low number of Black and Latino people in certain tracts, some MOE percentages were populated with infinite values.  I chose to drop these to create an average for the over 100% MOE tracts that was comparable to the under 100% MOE tracts.
 
 **Limitations:**
-[Note any limitations in your analysis - sample size issues, geographic scope, temporal factors, etc.]
+The biggest limitation with this workflow was the chosen geography.  The racial variables for these counties and tracts do not produce effective MOE calculations due to their extraordinarily low numbers of people of color living there.
 
 ---
 
