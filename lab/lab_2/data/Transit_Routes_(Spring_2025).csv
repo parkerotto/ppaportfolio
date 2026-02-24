@@ -1,0 +1,179 @@
+﻿FID,LineAbbr,LineName,tpField00,Div1,Div2,Div3,Div4,TTZeroDir,TTOneDir,tpField01,RevenueNo,DirNum0,DirNum1,tpField020,tpField021,Mode,Shape__Length
+1,1,Parx Casino to 54th-City,1,COM,FRA, , ,Parx Casino,54th-City,6,City,0,1,Northbound,Southbound,Bus,98455.0643352973
+2,2,20-Johnston to Pulaski-Hunting Park,2,MID,SOU, , ,20th-Johnston,Pulaski-Hunting Park,6,City,0,1,Southbound,Northbound,Bus,32730.2564392005
+3,3,33rd-Cecil B. Moore to Frankford TC,3,FRA, , , ,33rd-Cecil B. Moore,Frankford Transportation Center,6,City,0,1,Westbound,Eastbound,Bus,19724.5719269101
+4,4,Broad-Pattison to Fern Rock TC,4,MID,SOU, , ,Broad-Pattison,Fern Rock Transportation Center,6,City,0,1,Southbound,Northbound,Bus,30701.7044643334
+5,5,2nd-Market to Frankford Transit Ctr,5,FRA, , , ,2nd-Market,Frankford Transportation Center,6,City,0,1,Southbound,Northbound,Bus,36057.8198692338
+6,6,Cheltenham-Ogontz to Olney TC,6,ALL, , , ,Olney Transportation Center,Cheltenham-Ogontz,7,City,0,1,Southbound,Northbound,Bus,8082.22856108422
+7,7,Pier 70 to 33rd-Dauphin,7,SOU, , , ,Pier 70,33rd-Dauphin,6,City,0,1,Southbound,Northbound,Bus,41741.8730867232
+8,8,Olney TC to Frankford TC,8,FRA, , , ,Olney Transportation Center,Frankford Transportation Center,6,City,0,1,Westbound,Eastbound,Bus,15726.5447712219
+9,9,4th-Walnut to Andorra,9,ALL, , , ,4th-Walnut,Andorra,6,City,0,1,Southbound,Northbound,Bus,43004.6411078441
+10,12,Columbus-Dock to 50th-Woodland,12,SOU, , , ,Columbus-Dock,50th-Woodland,6,City,0,1,Eastbound,Westbound,Bus,36415.8916357523
+11,14,FTC to Neshaminy/Oxford Valley,14,COM, , , ,Neshaminy & Oxford Valley Malls,Frankford Transportation Center,11,City,0,1,Northbound,Southbound,Bus,178570.440923917
+12,16,City Hall to Cheltenham-Ogontz,16,MID,SOU, , ,City Hall,Cheltenham-Ogontz,6,City,0,1,Southbound,Northbound,Bus,25903.3429059636
+13,17,Front-Mkt to 20-Johnston/Broad-Pat,17,SOU, , , ,Penn's Landing,20th-Johnston & Broad-Pattison,6,City,0,1,Northbound,Southbound,Bus,58003.2698202927
+14,18,Fox Chase to Cedarbrook Plaza,18,MID, , , ,Fox Chase,Cedarbrook Plaza,11,City,0,1,Eastbound,Westbound,Bus,56971.9189503663
+15,19,Torresdale Station to Frankford TC,19,COM,FRA, , ,Torresdale Station,Frankford Transportation Center,6,City,0,1,Northbound,Southbound,Bus,36451.4249801595
+16,20,Philadelphia Mills to Frankford TC,20,COM, , , ,Philadelphia Mills,Frankford Transportation Center,6,City,0,1,Northbound,Southbound,Bus,79951.1835880014
+17,21,Columbus-Dock to 69th St TC,21,CAL, , , ,Columbus-Dock,69th Street Transportation Center,6,City,0,1,Eastbound,Westbound,Bus,53897.3359208669
+18,22,Warminster/Willow Grove to Olney TC,22,MID, , , ,Willow Grove & Warminster,Olney Transportation Center,6,City,0,1,Northbound,Southbound,Bus,48502.0298384379
+19,23,11th Market to Chestnut Hill,23,MID,SOU, , ,11th-Market,Chestnut Hill,6,City,0,1,Southbound,Northbound,Bus,28949.1435794372
+20,24,Southamptn/Rockldge to Frankford TC,24,COM, , , ,Southampton & Rockledge,Frankford Transportation Center,6,City,0,1,Northbound,Southbound,Bus,36770.6461977456
+21,25,Frankford TC to Columbus Commons,25,FRA, , , ,Frankford Transportation Center,Columbus Commons,6,City,0,1,Northbound,Southbound,Bus,39842.8314541489
+22,26,Frankford TC to Chelten Av Station,26,MID, , , ,Frankford Transportation Center,Chelten Ave Station,6,City,0,1,Eastbound,Westbound,Bus,41246.6968010222
+23,27,Broad-Carpenter to Plymouth Meeting,27,ALL, , , ,Broad-Carpenter,Plymouth Meeting Mall,11,City,0,1,Southbound,Northbound,Bus,66948.2805083492
+24,28,Fern Rock TC to Torresdale-Cottman,28,COM, , , ,Fern Rock Transportation Center,Torresdale-Cottman,6,City,0,1,Westbound,Eastbound,Bus,25911.7965453643
+25,29,Pier 70 to 33rd-Dickinson,29,SOU, , , ,Pier 70,33rd-Dickinson,6,City,0,1,Eastbound,Westbound,Bus,14179.7161546453
+26,30,Gray 30th St Station to 69th St TC,30,CAL, , , ,Amtrak William H. Gray III 30th St Station,69th Street Transportation Center,6,City,0,1,Eastbound,Westbound,Bus,27357.9236148484
+27,31,City Hall to 76th-City,31,CAL, , , ,City Hall,76th-City,6,City,0,1,Eastbound,Westbound,Bus,27715.055116829
+28,32,Broad-Carpenter to Ridge-Lyceum,32,MID, , , ,Broad-Carpenter,Ridge-Lyceum,6,City,0,1,Southbound,Northbound,Bus,36090.0575280039
+29,33,5th-Market to 23rd-Venango,33,ALL, , , ,5th-Market,23rd-Venango,6,City,0,1,Southbound,Northbound,Bus,39288.2400360337
+30,35,Manayunk Roxborough Loop,35,MID, , , ,Manayunk Roxborough Loop, ,6,City,0,0,Loop, ,Bus,12694.8694901001
+31,37,Chester Transit Ctr to Broad-Snyder,37,SOU, , , ,Chester Transportation Center,Broad-Snyder,6,City,0,1,Westbound,Eastbound,Bus,65631.8772347469
+32,38,5th-Market to Wissahickon TC,38,CAL, , , ,5th-Market,Wissahickon Transportation Center,6,City,0,1,Eastbound,Westbound,Bus,59980.6469364804
+33,39,Richmond-Cumberland to 33rd-Dauphin,39,MID, , , ,Richmond-Cumberland,33rd-Dauphin,6,City,0,1,Eastbound,Westbound,Bus,21022.1139754155
+34,40,2nd-Lombard to Conshohocken-Monumnt,40,CAL, , , ,2nd-Lombard,Conshohocken-Monument,6,City,0,1,Eastbound,Westbound,Bus,34486.3260397384
+35,41 (J),J - Cheltn-Wsshkn to Richmnd-Orthdx,706,FRA, , , ,Chelten-Wissahickon,Richmond-Orthodox,6,City,0,1,Westbound,Eastbound,Bus,26991.8818310086
+36,42,2nd-Spruce to 61st-Pine/Wycombe,42,CAL, , , ,2nd-Spruce,Wycombe or 61st-Pine,6,City,0,1,Eastbound,Westbound,Bus,24840.3054394086
+37,43,Richmond-Cumberland to 50th-Parksde,43,CAL, , , ,Richmond-Cumberland,50th-Parkside,6,City,0,1,Eastbound,Westbound,Bus,25320.3062609529
+38,44,Front-Market to Ardmore,44,CAL, , , ,Front-Market,Ardmore,6,City,0,1,Eastbound,Westbound,Bus,123189.999997256
+39,45,Broad-Oregon to 12th-Vine,45,MID,SOU, , ,Broad-Oregon,Nobel-12th,6,City,0,1,Southbound,Northbound,Bus,15970.6206875958
+40,46,58th-Baltimore to 63rd-Malvern,46,CAL, , , ,58th-Baltimore,63rd-Malvern,6,City,0,1,Southbound,Northbound,Bus,8518.60444663719
+41,47,Whitman Plaza to 5th-Godfrey,47,MID,SOU, , ,Whitman Plaza,5th-Godfrey,6,City,0,1,Southbound,Northbound,Bus,37128.3425607866
+42,47M,Whitmn Plz to 7th-Spg Grd via 9thSt,471,SOU, , , ,7th-Spring Garden via 9th Street,Whitman Plaza,6,City,0,1,Northbound,Southbound,Bus,16958.7644009889
+43,48,Front-Market to 27th-Allegheny,48,ALL, , , ,Front-Market,27th-Allegheny,7,City,0,1,Southbound,Northbound,Bus,21375.6760804625
+44,49,33rd-Dauphin to 29th-Snyder,49,ALL, , , ,29th-Snyder,33rd-Dauphin,6,City,0,1,Southbound,Northbound,Bus,23872.2493515489
+45,50,Parx to Frankford Transit Center,50,COM, , , ,Parx Casino via Philadelphia Mills,Frankford Transportation Center,6,City,0,1,Northbound,Southbound,Bus,49070.6402180167
+46,51 (L),L - PlymthMtg/ChestntHl to Olney TC,710,MID, , , ,Erdenheim or Plymouth Meeting Mall,Olney Transportation Center,6,City,0,1,Northbound,Southbound,Bus,42479.4593394401
+47,52,49th-Woodlnd to 54th-City/Parksd Lp,52,CAL, , , ,49th-Woodland,54th-City or 50th-Parkside,6,City,0,1,Southbound,Northbound,Bus,30592.7674769752
+48,53,Wayne-Carpenter to Broad-Hunting Pk,53,MID, , , ,Wayne-Carpenter,Broad-Hunting Park or G-Hunting Park,6,City,0,1,Northbound,Southbound,Bus,17277.1625107579
+49,54,Richmond-Cambria to 33rd-Dauphin,54,ALL, , , ,Richmond-Cambria,33rd-Dauphin,7,City,0,1,Eastbound,Westbound,Bus,14301.1061789389
+50,55,Doylestown/Willow Grove to Olney TC,55,MID, , , ,Willow Grove & Doylestown,Olney Transportation Center,6,City,0,1,Northbound,Southbound,Bus,90374.5734768682
+51,56,23rd-Venango to Torresdale-Cottman,56,MID, , , ,23rd-Venango & Bakers Centre,Torresdale-Cottman,6,City,0,1,Westbound,Eastbound,Bus,20851.7069507223
+52,57,WhitmnPlz to RisngSun-Olney/FernRck,57,MID,SOU, , ,Whitman Plaza,Rising Sun-Olney & Fern Rock Transportation Center,6,City,0,1,Southbound,Northbound,Bus,45550.6367766592
+53,58,Neshaminy/Somerton to Frankford TC,58,COM, , , ,Neshaminy Mall & Somerton,Frankford Transportation Center,6,City,0,1,Northbound,Southbound,Bus,47937.9434486454
+54,59,Castor-Bustleton to Arrott TC,59,FRK, , , ,Castor-Bustleton,Arrott Transportation Center,9,City,0,1,Northbound,Southbound,Bus,12458.9616761335
+55,60,35th-Allegheny to Rich-Westmoreland,60,ALL, , , ,35th-Allegheny,Richmond-Westmoreland,7,City,0,1,Westbound,Eastbound,Bus,26899.506634728
+56,61,9th-Market to Manayunk,61,MID, , , ,9th-Market,Manayunk,6,City,0,1,Southbound,Northbound,Bus,19463.9708908029
+57,62,9th-Market to Andorra,62,MID, , , ,9th-Market,Andorra,6,City,0,1,Southbound,Northbound,Bus,43332.7184550643
+58,63 (G),G - Lanknau/Overbrk to ColCom/FdCtr,703,SOU, , , ,Overbrook & Lankenau Medical Center,Columbus Commons or Food Distribution Center,6,City,0,1,Northbound,Southbound,Bus,78712.2842287542
+59,64,50th-Parkside to Pier 70,64,SOU, , , ,50th-Parkside,Pier 70,6,City,0,1,Westbound,Eastbound,Bus,24240.7857742848
+60,65,Germantown-Chelten to 69th St TC,65,CAL, , , ,Germantown-Chelten,69th Street Transportation Center,6,City,0,1,Northbound,Southbound,Bus,26469.3308706406
+61,66,Frankford TC to Frankford-Knights,66,FRK, , , ,Frankford Transportation Center,Frankford-Knights,9,City,0,1,Southbound,Northbound,Bus,14092.7285816313
+62,67,Phila Mills/Bustletn to Frankfrd TC,67,COM,FRA, , ,Philadelphia Mills & Bustleton,Frankford Transportation Center,6,City,0,1,Northbound,Southbound,Bus,73353.176626945
+63,68,Broad-Oregon to UPS/69th St TC,68,SOU, , , ,69th Street Transportation Center via UPS and PNC,Broad-Oregon via PNC and UPS,6,City,0,1,Northbound,Southbound,Bus,81638.2789929985
+64,70,Frank-Grg/Torsdl-Cottmn to FernRock,70,COM, , , ,Torresdale-Cottman & Frankford-Gregg,Fern Rock Transportation Center,6,City,0,1,Eastbound,Westbound,Bus,28230.5551182863
+65,71 (H),H - Broad-Erie to Cheltenham-Ogontz,801,MID, , , ,Broad-Erie,Cheltenham-Ogontz,6,City,0,1,Southbound,Northbound,Bus,24652.6223510347
+66,73,Frankford TC to Richmnd-Westmorelnd,73,FRA, , , ,Frankford Transportation Center,Richmond-Westmoreland,6,City,0,1,Northbound,Southbound,Bus,14242.6801538473
+67,75,Wayne Junct to Arrott Transit Ctr,75,FRK, , , ,Wayne Junction,Arrott Transportation Center,9,City,0,1,Westbound,Eastbound,Bus,14551.1220906967
+68,77,Roosevelt-Cottman to Chestnut Hill,77,MID, , , ,Roosevelt-St Vincent,Chestnut Hill,6,City,0,1,Eastbound,Westbound,Bus,32807.618758391
+69,78,Express Cornwells Hghts to Ctr City,78,COM, , , ,Express Center City,Express Cornwells Heights,6,City,0,1,Southbound,Northbound,Bus,75846.7119786326
+70,79,Columbus Commons to 29th-Snyder,79,SOU, , , ,Columbus Commons,29th-Snyder,6,City,0,1,Eastbound,Westbound,Bus,7219.80110403939
+71,80,Express Horsham to Olney TC,80,MID, , , ,Express Horsham,Express Olney Transportation Center,7,City,0,1,Northbound,Southbound,Bus,35896.0003465184
+72,81 (XH),XH - Broad-Erie to Cheltenham-Ogntz,802,MID, , , ,Broad-Erie,Cheltenham-Ogontz,6,City,0,1,Southbound,Northbound,Bus,20425.7618274376
+73,82 (R),R - Wissahckn TC/Henry-Midvl to FTC,712,FRA, , , ,Henry-Midvale or Wissahickon Transportation Center,Frankford Transportation Center,6,City,0,1,Westbound,Eastbound,Bus,31759.9647616763
+74,84,Bustletn-CountyLn/PhilaMills to FTC,84,COM, , , ,Philadelphia Mills & Bustleton-County Line,Frankford Transportation Center,6,City,0,1,Northbound,Southbound,Bus,59969.1113000235
+75,88,Bethayres/Frankford-Gregg to FTC,88,COM,FRA, , ,Bethayres or Frankford-Gregg,Frankford Transportation Center,6,City,0,1,Northbound,Southbound,Bus,38681.1633767906
+76,88S,Huberts 484,881,FRA, , , ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Inbound,Outbound,Bus,59934.3893429598
+77,89,Front-Dauphin to Arrott Transit Ctr,89,MID, , , ,Front-Dauphin,Arrott Transportation Center,6,City,0,1,Westbound,Eastbound,Bus,27630.6762525824
+78,406,West Phila to 67th-Elmwood,406,SOU, , , ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,0,Inbound, ,Bus,14408.5138851908
+79,409,59th-Balitmore to 84th-Crane,409,SOU, , , ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,0,Inbound, ,Bus,11901.3101214688
+80,411,74th-Elmwood to 46th-Ludlow,411,CAL,SOU, , ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,10452.7692967863
+81,415,46th-Ludlow to Passyunk-Elmwood,415,CAL,SOU, , ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,10337.1894747539
+82,426,Torresdale-Bridge to 10th-Lycoming,426,FRA,MID, , ,10th-Lycomng,Torrsdl-Brdg,6,City,0,1,Outbound,Inbound,Bus,20494.7468459325
+83,428,Richmond-Venango to 10th-Lycomng,428,MID, , , ,10th-Lycomng,Richmnd-Vnango,6,City,0,1,Outbound,Inbound,Bus,12238.9557492416
+84,433,Castor-Cottman to 10th-Lycomng,433,FRA,MID, , ,10th-Lycomng,Castr-Cottmn,6,City,0,1,Outbound,Inbound,Bus,26253.951235617
+85,438,Germantown to Upper Roxborough,438,ALL,MID,FRA, ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,13568.2967501913
+86,439,Germantown to Roxborough,439,ALL,MID,FRA, ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,10305.8063555706
+87,441,Andorra/Roxborough to Broad-Vine,441,ALL,MID,FRA, ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,41723.1345151051
+88,442,Henry-Roberts to Barren Hill,442,ALL,MID,FRA, ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,15635.9359242661
+89,445,Roxborough to Frankford Transit Ctr,445,ALL,MID,FRA, ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,20702.7920965849
+90,446,Henry-Cinnaminsn to Junipr-Commerce,446,ALL,MID,FRA, ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,26235.333935535
+91,447,Frankford TC to Henry-Cinnaminson,447,ALL,MID,FRA, ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,35109.6102438133
+92,448,Broad-Vine to Upper Roxborough,448,ALL,MID,FRA, ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,20769.1956438215
+93,450,Frankford-Linden to Bustletn-Verree,450,COM,FRA, , ,Bustltn-Verree,Frankfrd-Lindn,6,City,0,1,Inbound,Outbound,Bus,26659.2173782476
+94,452,Academy-Medford to Bustleton-Verree,452,COM,FRA, , ,Bustltn-Verree,Acdmy-Medfrd,6,City,0,1,Inbound,Outbound,Bus,16683.3342729105
+95,461,Bustleton-Verree to Academy-Chalfnt,461,COM, , , ,Acdmy-Chalfnt,Bustleton-Verree,6,City,0,1,Inbound,Outbound,Bus,18081.3414432603
+96,462,Welsh-Bridal to Academy-Chalfont,462,COM, , , ,Acadmy-Chalfnt,Welsh-Bidal,6,City,0,1,Inbound,Outbound,Bus,23758.9944436248
+97,475,Bustltn-County Ln to Verree-Marchmn,475,COM,FRA, , ,Verree-Marchmn,Bustltn-County Ln,6,City,0,1,Inbound,Outbound,Bus,16783.7317527937
+98,476,Southamptn-Blvd to Verree-Marchman,476,COM,FRA, , ,Verree-Marchmn,Southmptn-Blvd,6,City,0,1,Inbound,Outbound,Bus,15402.6856526052
+99,477,Academy-Comly to Verree-Marchman,477,COM,FRA, , ,Verree-Marchmn,Acadmy-Comly,6,City,0,1,Inbound,Outbound,Bus,16407.518144324
+100,478,Welsh-Blvd to Verree-Marchman,478,COM,FRA, , ,Verree-Marchmn,Welsh-Blvd,6,City,0,1,Inbound,Outbound,Bus,11349.100845004
+101,484,Holy Redmr Hosptl to Cottmn-Torrsdl,484,FRA, , , ,Cottmn-Torrsdl,Holy Redmr Hosptl,6,City,0,1,Inbound,Outbound,Bus,23710.3161816699
+102,490,Fox Chase Loop to Verree-Marchman,490,COM,FRA, , ,Verree-Marchmn,FoxChase Lp,6,City,0,1,Inbound,Outbound,Bus,6129.12050880767
+103,492,Bustletn-Rennard to Verree-Marchman,492,COM,FRA, , ,Verree-Marchmn,Bustltn-Rennrd,6,City,0,1,Inbound,Outbound,Bus,14054.4660164043
+104,495,Southmptn-Worthngtn to 10th-Lycomng,495,FRA,MID, , ,10th-Lycomng,SHmtn-Wrtgtn,6,City,0,1,Outbound,Inbound,Bus,42880.8608673222
+105,BSO,Midnight-5am Service (Bus) for B1,701,MID,SOU, , ,NRG Station,Fern Rock Transportation Center,6,City,0,1,Southbound,Northbound,Bus,31224.9771011413
+106,BLVDDIR,Blvd Direct Neshaminy Mall to FTC,500,COM, , , ,Neshaminy Mall,Frankford Transportation Center,14,City,0,1,Northbound,Southbound,Bus,45537.9521108669
+107,HRS,400 Series (limited service),704,ALL,MID,FRA, ,400 Series (Limited Service),400 Series (Limited Service),6,City,0,1,Outbound,Inbound,Bus,107918.270942394
+108,K,Ridge-Midvale to Arrott Transit Ctr,707,FRA, , , ,Ridge-Midvale,Arrott Transportation Center,6,City,0,1,Westbound,Eastbound,Bus,29021.5964742965
+109,MFO,Midnight-5am Service (Bus) for L1,711,CAL,COM,FRA, ,Frankford Transportation Center,69th Street Transportation Center,6,City,0,1,Eastbound,Westbound,Bus,53933.3791121101
+110,G (15),Route 15,15,CAR, , , ,63rd-Girard,Richmond-Westmoreland,8,City,0,1,Westbound,Eastbound,Metro - Route 15 Trolley,21118.0584137421
+111,T1 (10),Route 10,10,CAR, , , ,13th-Market,63rd-Malvern,8,City,0,1,Eastbound,Westbound,Metro - Subway-Surface Trolleys,17053.8344076062
+112,204,Eagleview to Paoli Train Station,204,PRIV, , , ,Eagleview,Paoli Station,13, ,0,1,Westbound,Eastbound,Bus,50530.5195819464
+113,310,Horsham Breeze Red,310,GER, , , ,Horsham Breeze Red, ,13,S,0,0,Loop, ,Bus,14194.6656724705
+114,311,Horsham Breeze Blue,311,GER, , , ,Horsham Breeze Blue, ,13,S,0,0,Loop, ,Bus,15134.4610259437
+115,312,Cornwells Heights,0,CHW, , , , , ,13,S,0,1,Northbouund,Southbound,Bus,1238.05572251338
+116,316,LUCY Loops,316,GER, , , ,Lucy Loops, ,13, ,0,0,Loop, ,Bus,12861.248176887
+117,LUCYGO,Gold Loop through University City,3161,GER, , , ,Gold Loop, ,13, ,0,0,Loop, ,Bus,8344.31430540247
+118,LUCYGR,Green Loop through University City,3162,GER, , , ,Green Loop, ,13, ,0,0,Loop, ,Bus,7728.83457360348
+119,MANNLP,Mann Loop,3500,MANN, , , ,Mann Center,19th and JFK,0, ,0,1,Outbound,Inbound,Bus,17120.0746599451
+120,T2 (34),Route 34,34,ELM, , , ,13th-Market,61st-Baltimore,8,City,0,1,Eastbound,Westbound,Metro - Subway-Surface Trolleys,45731.813164042
+121,T3 (13),Route 13,13,ELM, , , ,13th-Market,Yeadon-Darby Transportation Center,8,City,0,1,Eastbound,Westbound,Metro - Subway-Surface Trolleys,30983.871608407
+122,T4 (11),Route 11,11,ELM, , , ,13th-Market,Darby Transportation Center,8,City,0,1,Eastbound,Westbound,Metro - Subway-Surface Trolleys,18633.629890426
+123,T4 Bus,Route 11 Bus,11,ELM, , , ,13th-Market,Darby Transportation Center,6,City,0,1,Eastbound,Westbound,Bus,18633.629890426
+124,T5 (36),Route 36,36,ELM, , , ,13th-Market,80th-Eastwick,8,City,0,1,Eastbound,Westbound,Metro - Subway-Surface Trolleys,19577.9272729162
+125,T5 Bus,Route 36 Bus,361,ELM, , , ,13th-Market,80th-Eastwick,6,City,0,1,Eastbound,Westbound,Bus,5538.27690365316
+126,90,Plymouth Mtng. to Norristown TC,90,FRO, , , ,Plymouth Meeting Mall,Norristown Transit Center,6, ,0,1,Eastbound,Westbound,Bus,29755.0903600706
+127,92,West Chester to King of Prussia,92,FRO, , , ,King of Prussia,Exton,6, ,0,1,Eastbound,Westbound,Bus,60088.4552559556
+128,93,Pottstown to Norristown Transit Ctr,93,FRO, , , ,Pottstown,Norristown Transit Center,6, ,0,1,Westbound,Eastbound,Bus,59012.2920531684
+129,94,Montgomery Mall to Chestnut Hill,94,FRO, , , ,Montgomery Mall,Chestnut Hill,6, ,0,1,Northbound,Southbound,Bus,41838.6078596721
+130,95,Gulph Mills to Willow Grove Mall,95,FRO, , , ,Gulph Mills,Willow Grove,6, ,0,1,Southbound,Northbound,Bus,61906.8371340051
+131,96,Lansdale to Norristown Transit Ctr,96,FRO, , , ,Lansdale,Norristown Transit Center,6, ,0,1,Northbound,Southbound,Bus,40392.4101115589
+132,97,Chestnut Hill to Norristown TC,97,FRO, , , ,Chestnut Hill,Norristown Transit Center,6, ,0,1,Eastbound,Westbound,Bus,36211.1266471598
+133,98,Plymouth Mtng to Norristown TC,98,FRO, , , ,Plymouth Meeting Mall,Norristown Transit Center,6, ,0,1,Eastbound,Westbound,Bus,22591.8944937016
+134,99,Phoenixville to Norristown TC,99,FRO, , , ,Phoenixville,Norristown Transit Center,6, ,0,1,Westbound,Eastbound,Bus,63107.853055561
+135,124,Chesterbrook to 13th-Market,124,FRO, , , ,King of Prussia & Chesterbrook,13th-Market,6,SUBURBAN,0,1,Westbound,Eastbound,Bus,119346.767918077
+136,127,Trenton Transit Ctr to OxfordValley,127,FRO, , , ,Trenton Transit Center,Oxford Valley Mall,6,SUBURBAN,0,1,Eastbound,Westbound,Bus,124277.85930704
+137,128,Neshaminy to Oxford Valley Mall,128,FRO, , , ,Neshaminy Mall,Oxford Valley Mall,6,SUBURBAN,0,1,Southbound,Northbound,Bus,143511.175122774
+138,129,Frankford-Knights to Oxford Valley,129,FRO, , , ,Frankford-Knights,Oxford Valley Mall,6,SUB,0,1,Southbound,Northbound,Bus,144532.964575272
+139,130,BCCC to Frankford-Knights,130,FRO, , , ,Bucks County Community College,Frankford-Knights,6, ,0,1,Northbound,Southbound,Bus,72912.5190872712
+140,131,Audubon to Norristown Transit Ctr,131,FRO, , , ,Audubon,Norristown Transportation Center,6, ,0,1,Westbound,Eastbound,Bus,33740.8760171078
+141,132,Telford to Montgomery Mall,132,FRO, , , ,Telford,Montgomery Mall,6, ,0,1,Northbound,Southbound,Bus,41337.0951068788
+142,133,Frankford-Knights to Bensalem,133,FRO, , , ,Bensalem,Frankford-Knights,6, ,0,1,Northbound,Southbound,Bus,13528.4965382125
+143,135,West Chester TC to Coatesville,135,FRO, , , , Coatesville,West Chester Transit Center,6, ,0,1,Westbound,Eastbound,Bus,49457.3993192982
+144,139,Limerick to King of Prussia,139,FRO, , , ,Limerick,King of Prussia,6, ,0,1,Westbound,Eastbound,Bus,45261.6225034365
+145,150,Parx Casino to Plymouth Meeting,150,FRO, , , ,Parx Casino,Plymouth Meeting Mall,6, ,0,1,Eastbound,Westbound,Bus,92505.87434519
+146,201,Ft Wash Office Ctr to Fort Wash Sta,201,FRO, , , ,Fort Washington Office Center,Fort Washington Station,6, ,0,1,Eastbound,Westbound,Bus,12213.3812889378
+147,206,Commons at Great Vly to Paoli Sta,206,FRO, , , ,The Commons at Great Valley,Paoli Station,6, ,0,1,Westbound,Eastbound,Bus,20953.1666165363
+148,B1,Broad Street Line Local,0,BSL, , , ,NRG Station,Fern Rock TC,0, ,0,1,Southbound,Northbound,Metro - Broad Street Line,45460.8583354303
+149,B2,Broad Street Line Express,0,BSL, , , ,Walnut-Locust,Fern Rock TC,0, ,0,1,Southbound,Northbound,Metro - Broad Street Line,15655.5911175678
+150,B3,Broad-Ridge Spur,0,BSL, , , ,8th St Station,Fern Rock TC,0, ,0,1,Southbound,Northbound,Metro - Broad Street Line,16983.5220795259
+151,BSL,NRG Station to Fern Rock TC,0,BSL, , , ,NRG Station,Fern Rock TC,0, ,0,1,Southbound,Northbound,Metro - Broad Street Line,24511.3099640408
+152,L1,Market-Frankford Line All Stops,0,MFL, , , ,Frankford TC,69th St TC,0, ,0,1,Eastbound,Westbound,Metro - Market-Frankford Line,29508.7371204628
+153,MFL,Market-Frankford Line,0,MFL, , , ,Frankford TC,69th St TC,0, ,0,1,Eastbound,Westbound,Metro - Market-Frankford Line,29508.7371204628
+154,103,Ardmore to 69th St Transit Center,103,VIC, , , ,Ardmore,69th Street Transportation Center,6,SUB,0,1,Northbound,Southbound,Bus,23347.2445522571
+155,104,West Chester U to 69th St TC,104,VIC, , , ,West Chester University,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,94357.0764967209
+156,105,Rosemont to 69th St Transit Center,105,VIC, , , ,Rosemont,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,22506.0000808303
+157,106,Paoli to 69th St Transit Center,106,VIC, , , ,Ardmore & Paoli,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,40953.0282663148
+158,107,Lawrence Park to 69th St TC,107,VIC, , , ,Lawrence Park,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,54399.3308524047
+159,108,UPS/Airport to 69th St Transit Ctr,108,VIC, , , ,Airport & Airport Business Center,69th Street Transportation Center,6,SUB,0,1,Southbound,Northbound,Bus,51188.0192164234
+160,109,Chester Transit Ctr to 69th St TC,109,VIC, , , ,Chester Transportation Center,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,29944.9723141612
+161,110,Penn State U to 69th St Transit Ctr,110,VIC, , , ,Springfield Mall & Penn State,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,56104.182967103
+162,111,Chadds Ford to 69th St Transit Ctr,111,VIC, , , ,Chadds Ford & Penn State,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,78923.9809548362
+163,112,DCCC to 69th St Transit Center,112,VIC, , , ,Delaware County Community College,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,32975.4545803845
+164,113,Claymont Sta to 69th St Transit Ctr,113,VIC, , , ,CLAYMONT TC,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,103124.988651944
+165,114,Wawa Station to Darby Transit Ctr,114,VIC, , , ,Penn State & I-95 Industrial Park,Darby Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,61933.9678656956
+166,115,DCCC/Darby Transit Ctr to Airport,115,VIC, , , ,Delaware County Community College,Airport,6,SUB,0,1,Northbound,Southbound,Bus,70907.5378023233
+167,117,Penn State U to I-95 Industrial Pk,117,VIC, , , ,Penn State,I-95 Industrial Park,6,SUB,0,1,Northbound,Southbound,Bus,42852.2038920898
+168,118,Newtown Square to Chester TC,118,VIC, , , ,Newtown Square,Chester Transportation Center,6,SUB,0,1,Northbound,Southbound,Bus,36433.6070497657
+169,119,Cheyney U to Chester Transit Center,119,VIC, , , ,Cheyney University,Chester Transportation Center,6,SUB,0,1,Northbound,Southbound,Bus,88814.1018478881
+170,120,Cheyney U to 69th St Transit Center,120,VIC, , , ,Cheyney University,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,64752.5086899987
+171,123,King of Prussia to 69th St TC,123,VIC, , , ,King of Prussia,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,84782.1879915275
+172,125,Valley Forge to 13th-Market,125, VIC, , , ,King of Prussia & Valley Forge,13th-Market,6,SUB,0,1,Westbound,Eastbound,Bus,106140.598274151
+173,126,Lawrence Park via Manoa to 69th TC,126,VIC, , , ,Lawrence Park,69th Street Transportation Center,6,SUB,0,1,Westbound,Eastbound,Bus,31347.4530718342
+174,D1,Route 101,101,VICM, , , ,Media,69th Street Transportation Center,8,SUB,0,1,Westbound,Eastbound,Metro - Media-Sharon Hill Line,18285.2528803847
+175,D1 BUS,Route 101 Bus,1014,VICM, , , , , ,6,SUB,0,1,Westbound,Eastbound,Bus,31992.3873369637
+176,D2,Route 102,102,VICM, , , ,Sharon Hill,69th Street Transportation Center,8,SUB,0,1,Westbound,Eastbound,Metro - Media-Sharon Hill Line,11260.8298280867
+177,D2 BUS,Route 102 Bus,1021,VICM, , , , , ,6,SUB,0,1,Westbound,Eastbound,Bus,15728.367024496
+178,M,Norristown High Speed Line Local,100,VICN, , , ,Norristown Transportation Center,69th Street Transportation Center,12,SUB,0,1,Northbound,Southbound,Metro - Norristown Highspeed Line,28112.7182053513

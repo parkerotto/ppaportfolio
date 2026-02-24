@@ -1,6 +1,11 @@
 project:
   type: website
   output-dir: docs
+  render:
+    - "index.qmd"
+    - "lab/lab_0/lab0_template.qmd"
+    - "lab/lab_1/lab1_template.qmd"
+    - "lab/lab_2/lab2_template.qmd"
 
 website:
   title: "Parker Otto - MUSA 5080 Portfolio"
@@ -14,6 +19,8 @@ website:
             text: "Lab 0: dplyr Basics"
           - href: lab/lab_1/lab1_template.qmd
             text: "Lab 1: Census Data Exploration"
+          - href: lab/lab_2/lab2_template.qmd
+            text: "Lab 2: Spatial Analysis and Visualization"
       - text: Final Project
         menu:
           - href: final/
@@ -24,6 +31,7 @@ format:
     theme: darkly
     toc: true
     code-fold: true
+    embed-resources: true
 
 execute:
   freeze: auto

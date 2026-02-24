@@ -1,0 +1,1529 @@
+---
+title: "Lab 2: Spatial Analysis and Visualization"
+subtitle: "Healthcare Access and Equity in Pennsylvania"
+author: "Parker Otto"
+date: today
+format: 
+  html:
+    code-fold: false
+    toc: true
+    toc-location: left
+    theme: darkly
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+---
+
+## Assignment Overview
+
+**Learning Objectives:**
+- Apply spatial operations to answer policy-relevant research questions
+- Integrate census demographic data with spatial analysis
+- Create publication-quality visualizations and maps
+- Work with spatial data from multiple sources
+- Communicate findings effectively for policy audiences
+
+---
+
+## Part 1: Healthcare Access for Vulnerable Populations
+
+### Research Question
+
+**Which Pennsylvania counties have the highest proportion of vulnerable populations (elderly + low-income) living far from hospitals?**
+
+Your analysis should identify counties that should be priorities for healthcare investment and policy intervention.
+
+### Required Analysis Steps
+
+Complete the following analysis, documenting each step with code and brief explanations:
+
+#### Step 1: Data Collection (5 points)
+
+Load the required spatial data:
+- Pennsylvania county boundaries
+- Pennsylvania hospitals (from lecture data)
+- Pennsylvania census tracts
+
+**Your Task:**
+```{r}
+#| echo: false
+#| message: false
+#| warning: false
+
+# Load required packages
+
+library(sf)
+library(tidyverse)
+library(tigris)
+library(tidycensus)
+library(scales)
+library(patchwork)
+library(here)
+library(knitr)
+library(ggspatial)
+library(showtext)
+library(classInt)
+library(systemfonts)
+
+census_api_key("a05b265afea2fb4dfbd350edadaf50fb30255de8")
+
+# Load spatial data
+
+pa_counties <- st_read(here("lab/lab_2/data/Pennsylvania_County_Boundaries.shp"), quiet = TRUE)
+pa_counties <- st_transform(pa_counties, 3365)
+
+hospitals <- st_read(here("lab/lab_2/data/hospitals.geojson"), quiet = TRUE)
+hospitals <- st_transform(hospitals, st_crs(pa_counties))
+
+suppressMessages(suppressWarnings({
+  pa_tracts <- tracts(state = "PA", cb = TRUE, progress_bar = FALSE)
+}))
+pa_tracts <- st_transform(pa_tracts, st_crs(pa_counties))
+
+```
+
+**Questions to answer:**
+- How many hospitals are in your dataset?
+
+223.
+
+- How many census tracts?
+
+3,445
+
+- What coordinate reference system is each dataset in?
+
+Pseudo-Mercator (EPSG 3857)
+
+---
+
+#### Step 2: Get Demographic Data 
+
+Use `tidycensus` to download tract-level demographic data for Pennsylvania.
+
+**Required variables:**
+- Total population
+- Median household income
+- Population 65 years and over (you may need to sum multiple age categories)
+
+**Your Task:**
+```{r}
+
+# Get demographic data from ACS
+
+over_65 <- c(
+  "F_65_66" = "B01001_020", "F_67_69" = "B01001_021",
+  "F_70_74" = "B01001_022", "F_75_79" = "B01001_023",
+  "F_80_84" = "B01001_024", "F_85plus" = "B01001_025",
+  "M_65_66" = "B01001_044", "M_67_69" = "B01001_045",
+  "M_70_74" = "B01001_046", "M_75_79" = "B01001_047",
+  "M_80_84" = "B01001_048", "M_85plus" = "B01001_049"
+)
+
+elderly <- get_acs(
+  geography = "tract",
+  variables = over_65,
+  state = "PA",
+  year = 2022,
+  output = "wide"
+)
+
+sum_elderly <- elderly %>%
+  select(-NAME) %>%
+  rowwise() %>%
+  mutate(
+    over_65E = sum(c_across(ends_with("E")), na.rm = TRUE),
+    over_65M = moe_sum(
+      moe = c_across(ends_with("M")),
+      estimate = c_across(ends_with("E")),
+      na.rm = TRUE
+    )
+  ) %>%
+  ungroup() %>% 
+  select(
+    GEOID, 
+    over_65E, 
+    over_65M
+  )
+
+tract_inc <- get_acs(
+  geography = "tract",
+  variables = "B19013_001",
+  state = "PA",
+  year = 2022,
+  output = "wide"
+)
+
+?get_acs
+
+tract_data <- get_acs(
+  geography = "tract",
+  variables = c(
+    total_pop = "B01003_001",
+    median_income = "B19013_001"
+  ),
+  state = "PA",
+  year = 2022,
+  output = "wide"
+  ) %>% 
+  left_join(
+    ., 
+    sum_elderly,
+    by = "GEOID"
+  )
+
+# Join to tract boundaries
+
+tract_data_spat <- pa_tracts %>% 
+  left_join(
+    tract_data,
+    by = "GEOID"
+  ) %>% 
+  select(
+    "GEOID",
+    "NAMELSAD",
+    "NAMELSADCO",
+    "ALAND",
+    "total_popE",
+    "total_popM",
+    "median_incomeE",
+    "median_incomeM",
+    "over_65E",
+    "over_65M",
+    "geometry"
+  )
+
+summary(tract_data_spat)
+
+```
+
+**Questions to answer:**
+- What year of ACS data are you using?
+
+2022
+
+- How many tracts have missing income data?
+
+62.
+
+- What is the median income across all PA census tracts?
+
+$70,188
+
+---
+
+#### Step 3: Define Vulnerable Populations 
+
+Identify census tracts with vulnerable populations based on TWO criteria:
+1. Low median household income (choose an appropriate threshold)
+2. Significant elderly population (choose an appropriate threshold)
+
+**Your Task:**
+```{r}
+# Filter for vulnerable tracts based on your criteria
+
+#Criteria 1: Median Income Under PA's Living Wage (1 Adult, 0 Children from https://livingwage.mit.edu/states/42)
+
+vuln1 <- 23.32 * (40 * 52)
+
+#If median_incomeE < vuln1, then pop_vuln = VULN
+
+#Criteria 2: Double The Median Population of Elderly Individuals
+
+vuln2 <- 2 * (656 / 3669)
+
+#If over_65E / total_popE > vuln2, then pop_vuln = VULN
+
+tracts_vuln <- tract_data_spat %>% 
+  mutate(
+    pop_vuln = ifelse(
+      median_incomeE < vuln1 | (over_65E / total_popE) > vuln2,
+      "VULN",
+      "NOT VULN"
+    )
+  )
+
+tract_vuln_sumstats <- tracts_vuln %>% 
+  group_by(pop_vuln) %>% 
+  summarize(
+    tract_count = n(),
+    med_inc = median(median_incomeE, na.rm = TRUE),
+    med_pop = median(total_popE),
+    med_elderly = median(over_65E)
+  )
+
+kable(
+  tract_vuln_sumstats %>% st_drop_geometry(),
+  col.names = c(
+    "Vulnerability",
+    "Tract Ct.",
+    "Med. Inc.",
+    "Med. Pop.",
+    "% 65+"
+  ),
+  caption = "Tract Demographics For PA Census Tracts By Vulnerability",
+  format.args = list(big.mark = ",")
+)
+
+```
+
+**Questions to answer:**
+- What income threshold did you choose and why?
+
+I chose to classify tracts with median incomes below \$48,505.60 as vulnerable because that is the amount of money considered to be a "living wage" by the MIT living wage calculator for a single adult in Pennsylvania (https://livingwage.mit.edu/states/42). While this number is significantly higher than what many advocates push for the minimum wage to be (\$23.32 per hour vs. \$15 per hour), it is essentially impossible to live on either amount of money without being a single adult (i.e. families on this income are extremely vulnerable).  
+
+- What elderly population threshold did you choose and why?
+
+I chose to classify tracts with elderly population shares more than two-times the share of median elderly individuals to others in the median tract population as vulnerable.  Some fluctuation in the percent population of elderly people is expected, but having more than double the median share ensures that a tract has an unusually large concentration of this vulnerable group and can therefore be labeled vulnerable as a whole.
+
+- How many tracts meet your vulnerability criteria?
+
+615 out of 2830.
+
+- What percentage of PA census tracts are considered vulnerable by your definition?
+
+21.73145%
+
+---
+
+#### Step 4: Calculate Distance to Hospitals 
+
+For each vulnerable tract, calculate the distance to the nearest hospital.
+
+**Your Task:**
+```{r}
+# Transform to appropriate projected CRS
+
+tracts_vuln_proj <- st_transform(tracts_vuln, 3365) # PA South projection, measures in feet.
+hospitals_proj <- st_transform(hospitals, 3365)
+
+# Calculate distance from each tract centroid to nearest hospital
+
+hospital_access <- tracts_vuln_proj %>% 
+  mutate(
+    nearest_hospital = st_nearest_feature(st_centroid(geometry), hospitals_proj),
+    hosp_dist_ft = st_distance(st_centroid(geometry), hospitals_proj[nearest_hospital, ], by_element = TRUE),
+    hosp_dist_ft = as.numeric(str_remove(hosp_dist_ft, " [US_survey_foot]"))
+  ) %>% 
+  mutate(
+    hosp_dist_mi = hosp_dist_ft / 5280,
+    pct_eld = (over_65E / total_popE) * 100
+  )
+
+ha_stats <- hospital_access %>% 
+  group_by(pop_vuln) %>% 
+  summarize(
+    tract_count = n(),
+    med_pop = median(total_popE),
+    pct_eld = median(pct_eld, na.rm = TRUE),
+    med_inc = median(median_incomeE, na.rm = TRUE),
+    max_hosp_dist = max(hosp_dist_mi),
+    med_hosp_dist = median(hosp_dist_mi),
+    mean_hosp_dist = mean(hosp_dist_mi),
+    min_hosp_dist = min(hosp_dist_mi),
+    over_15mi = sum(hosp_dist_mi > 15, na.rm = TRUE)
+  )
+
+kable(
+  ha_stats %>% st_drop_geometry(),
+  col.names = c(
+    "Vulnerability",
+    "Tract Ct.",
+    "Med. Pop.",
+    "% 65+",
+    "Med. Inc.",
+    "Max Hosp. Dist.",
+    "Med. Hosp. Dist.",
+    "Avg. Hosp. Dist.",
+    "Min. Hosp. Dist.",
+    "Hosp > 15 Mi. Away"
+  ),
+  caption = "Hospital Accessibility By Distance In PA Census Tracts By Vulnerability",
+  format.args = list(big.mark = ",")
+)
+
+```
+
+**Requirements:**
+- Use an appropriate projected coordinate system for Pennsylvania
+- Calculate distances in miles
+- Explain why you chose your projection
+
+**Questions to answer:**
+- What is the average distance to the nearest hospital for vulnerable tracts?
+
+~2.5 miles.
+
+- What is the maximum distance?
+
+~21.2 miles.
+
+- How many vulnerable tracts are more than 15 miles from the nearest hospital?
+
+10.
+
+---
+
+#### Step 5: Identify Underserved Areas 
+
+Define "underserved" as vulnerable tracts that are more than 15 miles from the nearest hospital.
+
+**Your Task:**
+```{r}
+# Create underserved variable
+
+underserved <- hospital_access %>% 
+  filter(
+    pop_vuln == "VULN" & hosp_dist_mi > 15
+  )
+
+```
+
+**Questions to answer:**
+- How many tracts are underserved?
+
+10.
+
+- What percentage of vulnerable tracts are underserved?
+
+1.62%.
+
+- Does this surprise you? Why or why not?
+
+At first, this surprised me.  I was shocked to see that there is such equity in PA tract hospital access (NON-vulnerable tracts have more than double the rate of being underserved at 4.22%).  However, then I looked into the data and the logic that was used for this assignment.  However, this does appear to make some sense from a healthcare point of view.  People who are in vulnerable groups (such as the elderly and the poor) tend to suffer dispraportionately from various health disorders.  Since many of them cannot afford proper treatment, they could be far sicker on average than non-vulnerable tracts (i.e. more customers forced to pay up to the private healthcare system for pricy treatments that may have been caught much earlier or be milder in wealthy, young communities; more customers = more incentive for having a hospital).
+
+---
+
+#### Step 6: Aggregate to County Level
+
+Use spatial joins and aggregation to calculate county-level statistics about vulnerable populations and hospital access.
+
+**Your Task:**
+```{r}
+# Spatial join tracts to counties
+
+tracts_by_county <- hospital_access %>% 
+  mutate(COUNTY_NAM = toupper(str_remove(NAMELSADCO, " County"))) %>% 
+  st_drop_geometry(.) %>% 
+  right_join(pa_counties %>% select(COUNTY_NAM))
+
+# Aggregate statistics by county
+
+county_stats <- tracts_by_county %>% 
+  group_by(NAMELSADCO) %>% 
+  summarize(
+    vuln_tracts = sum(pop_vuln == "VULN", na.rm = TRUE),
+    underserved = sum(pop_vuln == "VULN" & hosp_dist_mi > 15, na.rm = TRUE),
+    pct_underserved = sum(round((underserved / vuln_tracts)*100, digits = 2), na.rm = TRUE),
+    av_dist_vuln = mean(hosp_dist_mi[pop_vuln == "VULN"], na.rm = TRUE),
+    tot_vuln_pop = sum(total_popE[pop_vuln == "VULN"], na.rm = TRUE)
+  ) %>% 
+  arrange(desc(pct_underserved)) %>% 
+  st_drop_geometry(.)
+
+kable(
+  county_stats %>% st_drop_geometry(),
+  col.names = c(
+    "County",
+    "Vuln. Tract Ct.",
+    "Underserved Tract Ct.",
+    "% Vuln. Underserved",
+    "Avg. Vuln. Tract Hospital Dist. (Mi)",
+    "Total Vuln. Pop."
+  ),
+  caption = "Vulnerable Tract Hospital Access By PA County",
+  format.args = list(big.mark = ",")
+)
+
+```
+
+**Required county-level statistics:**
+- Number of vulnerable tracts
+- Number of underserved tracts  
+- Percentage of vulnerable tracts that are underserved
+- Average distance to nearest hospital for vulnerable tracts
+- Total vulnerable population
+
+**Questions to answer:**
+- Which 5 counties have the highest percentage of underserved vulnerable tracts?
+
+1. Cameron (100%)
+2. Clearfield (100%)
+3. Forest (100%)
+4. Monroe (66.67%)
+5. Pike (50%)
+
+- Which counties have the most vulnerable people living far from hospitals?
+
+Assuming the line for "far from hospitals" is >15 miles, there are only four counties that meet that criteria in their average distance to the nearest hospital for vulnerable tracts (sorted by vulnerable population):
+
+1. Forest (6,959 people; 18.4 mi)
+2. Clearfield (5,388 people; 18 mi)
+3. Pike County (4,842 people; 15.17 mi)
+4. Cameron (1,988 people; 18.67 mi)
+
+- Are there any patterns in where underserved counties are located?
+
+All underserved counties appear to be quite rural with there being two major clusters: Monroe and Pike to the south east of Scranton, and Forest, Clearfield, Cameron, and Centre all clustered around the state forests in north-central PA.
+
+---
+
+#### Step 7: Create Summary Table 
+
+Create a professional table showing the top 10 priority counties for healthcare investment.
+
+**Your Task:**
+```{r}
+# Create and format priority counties table
+
+priority_counties <- county_stats %>% 
+  arrange(desc(pct_underserved)) %>% 
+  slice_head(n = 6) %>% #There are only 6 counties with under-served vulnerable tracts.
+  select(NAMELSADCO, pct_underserved)
+    
+kable(
+  priority_counties %>% st_drop_geometry(),
+  col.names = c(
+    "County",
+    "% of Vuln. Tracts Underserved"
+  ),
+  caption = "Top 6 Priority Counties For Healthcare Investment",
+  format.args = list(big.mark = ",")
+)
+
+```
+
+**Requirements:**
+- Use `knitr::kable()` or similar for formatting
+- Include descriptive column names
+- Format numbers appropriately (commas for population, percentages, etc.)
+- Add an informative caption
+- Sort by priority (you decide the metric)
+
+---
+
+## Part 2: Comprehensive Visualization 
+
+Using the skills from Week 3 (Data Visualization), create publication-quality maps and charts.
+
+### Map 1: County-Level Choropleth 
+
+Create a choropleth map showing healthcare access challenges at the county level.
+
+**Your Task:**
+```{r}
+# Create county-level access map
+
+county_stats_merge <- tracts_by_county %>% 
+  group_by(COUNTY_NAM) %>% 
+  summarize(
+    vuln_tracts = sum(pop_vuln == "VULN", na.rm = TRUE),
+    underserved = sum(pop_vuln == "VULN" & hosp_dist_mi > 15, na.rm = TRUE),
+    pct_underserved = sum(round((underserved / vuln_tracts), digits = 2), na.rm = TRUE),
+    av_dist_vuln = mean(hosp_dist_mi[pop_vuln == "VULN"], na.rm = TRUE),
+    tot_vuln_pop = sum(total_popE[pop_vuln == "VULN"], na.rm = TRUE)
+  ) %>% 
+  left_join(pa_counties %>% select(COUNTY_NAM)) %>% 
+  st_as_sf(.)
+
+font_add_google("Ubuntu", "ubuntu")
+showtext_auto()
+
+ggplot(county_stats_merge) +
+  geom_sf(aes(fill = pct_underserved), color = "black", size = 0.3) +
+  coord_sf(clip = "off") +
+  scale_fill_fermenter(
+    name = "% of Vulnerable\nTracts Underserved",
+    labels = percent,
+    palette = "BuPu",
+    breaks = classIntervals(county_stats_merge$pct_underserved, n = 3, style = "jenks")$brks,
+    direction = 1,
+    limits = c(0, 1)
+  ) +
+  annotation_scale(
+    location = "bl",
+    width_hint = 0.5,
+    pad_x = unit(2, "cm"),
+    pad_y = unit(-1.2, "cm"),
+    unit_category = "imperial",
+    style = "ticks",
+    text_family = "ubuntu"
+  ) +
+  annotation_north_arrow(
+    location = "bl",
+    pad_x = unit(0, "cm"),
+    pad_y = unit(-1.5, "cm"),
+    style = north_arrow_fancy_orienteering(text_family = "ubuntu")
+  ) +
+  labs(
+    title = "PA Counties With Vulnerable Tracts Lacking Hospital Access",
+    subtitle = "Vulnerable Tracts Either Have Med. Inc. < $48,505.60 and/or have >35.76% 65+ Y/O Population",
+    caption = "Source: ACS 2018-2022"
+  ) +
+  theme_void() +
+  theme(
+    text = element_text(family = "ubuntu"),
+    plot.title = element_text(
+      family = "ubuntu",
+      size = 16,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      family = "ubuntu",
+      size = 8,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.title.position = "plot",
+    plot.caption = element_text(
+      family = "ubuntu",
+      size = 8,
+      color = "grey60",
+      hjust = 1,
+      margin = margin(t = 1, unit = "cm")
+    ),
+    plot.caption.position = "plot",
+    legend.position = "right",
+    legend.title = element_text(
+      family = "ubuntu",
+      size = 10,
+      face = "bold",
+      hjust = 0.5,
+      margin = margin(b = 0.5, unit = "cm")
+    ),
+    legend.text = element_text(
+      family = "ubuntu",
+      size = 9,
+      hjust = 0.5
+    ),
+    plot.margin = margin(0, 20, 0, 20)
+  )
+
+```
+
+**Requirements:**
+- Fill counties by percentage of vulnerable tracts that are underserved
+- Include hospital locations as points
+- Use an appropriate color scheme
+- Include clear title, subtitle, and caption
+- Use `theme_void()` or similar clean theme
+- Add a legend with formatted labels
+
+---
+
+### Map 2: Detailed Vulnerability Map 
+
+Create a map highlighting underserved vulnerable tracts.
+
+**Your Task:**
+```{r}
+# Create detailed tract-level map
+
+ggplot(hospital_access) +
+  geom_sf(
+    aes(fill = pop_vuln),
+    color = "white",
+    size = 0.3
+  ) +
+  geom_sf(
+    data = underserved,
+    aes(fill = "Underserved"),
+    color = "white",
+    size = 0.3
+  ) +
+  geom_sf(
+    data = hospitals,
+    aes(color = "Hospitals"),
+    size = 1,
+    shape = 3
+  ) +
+  coord_sf(clip = "off") +
+  scale_fill_manual(
+    name = "Legend",
+    values = c("Underserved" = "#e41a1c", "VULN" = "#fb9a99", "NOT VULN" = "gray90"),
+    labels = c("Underserved" = "Underserved", "VULN" = "Vulnerable", "NOT VULN" = "Not Vulnerable"),
+    breaks = c("Underserved", "VULN", "NOT VULN")
+  ) +
+  scale_color_manual(
+    name = "Legend",
+    values = c("Hospitals" = "#1f78b4") 
+  ) +
+  guides(
+    fill = guide_legend(title = NULL, byrow = TRUE),
+    color = guide_legend(title = NULL, byrow = TRUE)
+  ) +
+  annotation_scale(
+    location = "bl",
+    width_hint = 0.5,
+    pad_x = unit(2, "cm"),
+    pad_y = unit(-1.2, "cm"),
+    unit_category = "imperial",
+    style = "ticks",
+    text_family = "ubuntu"
+  ) +
+  annotation_north_arrow(
+    location = "bl",
+    pad_x = unit(0, "cm"),
+    pad_y = unit(-1.5, "cm"),
+    style = north_arrow_fancy_orienteering(text_family = "ubuntu")
+  ) +
+  labs(
+    title = "PA Hospital Access For Vulnerable and Underserved Tracts",
+    subtitle = "Vulnerable Tracts Either Have Med. Inc. < $48,505.60 and/or have >35.76% 65+ Y/O Population\nUnderserved Tracts Are Vulnerable Tracts With Centers > 15 Mi From The Closest Hospital",
+    caption = "Source: ACS 2018-2022"
+  ) +
+  theme_void() +
+  theme(
+    text = element_text(family = "ubuntu"),
+    plot.title = element_text(
+      family = "ubuntu",
+      size = 16,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      family = "ubuntu",
+      size = 8,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.title.position = "plot",
+    plot.caption = element_text(
+      family = "ubuntu",
+      size = 8,
+      color = "grey60",
+      hjust = 1,
+      margin = margin(t = 1, unit = "cm")
+    ),
+    plot.caption.position = "plot",
+    legend.position = "right",
+    legend.text = element_text(
+      family = "ubuntu",
+      size = 9
+    ),
+    plot.margin = margin(0, 20, 0, 20)
+  )
+
+```
+
+**Requirements:**
+- Show underserved vulnerable tracts in a contrasting color
+- Include county boundaries for context
+- Show hospital locations
+- Use appropriate visual hierarchy (what should stand out?)
+- Include informative title and subtitle
+
+---
+
+### Chart: Distribution Analysis
+
+Create a visualization showing the distribution of distances to hospitals for vulnerable populations.
+
+**Your Task:**
+```{r}
+# Create distribution visualization
+
+ha_vuln <- hospital_access %>% 
+  filter(pop_vuln == "VULN")
+
+ha_vuln %>% 
+  ggplot(aes(x = hosp_dist_mi)) + 
+  geom_histogram(bins = 30, fill = "#fb9a99", color = "white") + 
+  labs(
+    title = "Hospital Distance Distribution for Vulnerable Tracts",
+    x = "Distance From Tract Center To Nearest Hospital (Mi)",
+    y = "Count of Vulnerable Tracts",
+    caption = "Source: ACS 2018-2022",
+    tag = "The vast majority of vulnerable tracts are well served by hospitals (< 5 mi. away).\nVery few are considered underserved (> 15 mi away)."
+  ) +
+  theme_minimal() +
+    theme(
+    text = element_text(family = "ubuntu"),
+    plot.title = element_text(
+      family = "ubuntu",
+      size = 16,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.title.position = "plot",
+    plot.caption = element_text(
+      family = "ubuntu",
+      size = 8,
+      color = "grey60",
+      hjust = 1,
+      margin = margin(t = 1, unit = "cm")
+    ),
+    plot.caption.position = "plot",
+    legend.position = "right",
+    legend.text = element_text(
+      family = "ubuntu",
+      size = 9
+    ),
+    axis.title = element_text(
+      family = "ubuntu",
+      face = "bold"
+    ),
+    axis.text = element_text(
+      family = "ubuntu"
+    ),
+    plot.tag = element_text(
+      family = "ubuntu",
+      size = 8,
+      color = "gray60",
+      hjust = 0,
+    ),
+    plot.tag.position = c(0, 0.03),
+    plot.margin = margin(20, 20, 5, 20)
+  )
+
+```
+
+**Suggested chart types:**
+- Histogram or density plot of distances
+- Box plot comparing distances across regions
+- Bar chart of underserved tracts by county
+- Scatter plot of distance vs. vulnerable population size
+
+**Requirements:**
+- Clear axes labels with units
+- Appropriate title
+- Professional formatting
+- Brief interpretation (1-2 sentences as a caption or in text)
+
+---
+
+## Part 3: Bring Your Own Data Analysis 
+
+Choose your own additional spatial dataset and conduct a supplementary analysis.
+
+### Your Analysis
+
+**Your Task:**
+
+1. **Find and load additional data**
+   - Document your data source
+   - Check and standardize the CRS
+   - Provide basic summary statistics
+
+```{r}
+# Load your additional dataset
+
+ats <- st_read(here("lab/lab_2/data/Transit_Stops_(Spring_2025)/Transit_Stops_(Spring_2025).shp"), quiet = TRUE)
+
+ats_freqbus <- ats %>% 
+    filter(
+    LineAbbr %in% c(
+      "3", "6", "17", "18", "21", "23", "33",
+      "45", "46", "47", "48", "51", "52",
+      "56", "58", "60", "63", "66", "70",
+      "79", "82", "108", "113", "BLVDDIR"
+    )
+  ) %>% 
+  select(
+    LineAbbr, Direction, StopId, Sequence, StopName, geometry
+  ) %>% 
+  st_transform(., 3365)
+
+ats_rail <- ats %>% 
+  filter(
+    LineAbbr %in% c(
+      "G1", "T1", "T2", "T3",
+      "T4", "T5", "BSL", "MFL",
+      "D1", "D2", "M1"
+    )
+  ) %>% 
+  select(
+    LineAbbr, Direction, StopId, Sequence, StopName, geometry
+  ) %>% 
+  st_transform(., 3365)
+
+atr <- st_read(here("lab/lab_2/data/Transit_Routes_(Spring_2025)/Transit_Routes_(Spring_2025).shp"), quiet = TRUE)
+
+
+atr_freqbus <- atr %>% 
+  filter(
+    LineAbbr %in% c(
+      "3", "6", "17", "18", "21", "23", "33",
+      "45", "46", "47", "48", "51 (L)", "52",
+      "56", "58", "60", "63 (G)", "66", "70",
+      "79", "82 (R)", "108", "113", "BLVDDIR"
+    )
+  ) %>% 
+  select(
+    LineAbbr, Mode, tpField020, tpField021, geometry
+  ) %>% 
+  st_transform(., 3365)
+
+atr_rail <- atr %>% 
+  filter(
+    LineAbbr %in% c(
+      "G (15)", "T1 (10)", "T2 (34)", "T3 (13)",
+      "T4 (11)", "T5 (36)", "B1", "B2", "B3", "L1",
+      "D1", "D2", "M"
+    )
+  ) %>% 
+  select(
+    LineAbbr, Mode, tpField020, tpField021, geometry
+  ) %>% 
+  st_transform(., 3365)
+
+phl_county <- counties(state = "PA", year = 2022, progress_bar = FALSE) %>% 
+  filter(NAME == "Philadelphia") %>% 
+  st_transform(., 3365)
+
+phl_tracts <- tracts(state = "PA", county = "Philadelphia", cb = TRUE, progress_bar = FALSE)
+
+phl_race <- get_acs(
+  geography = "tract",
+  variables = c(
+    total_pop = "B01003_001",
+    white_pop = "B03002_003",
+    black_pop = "B03002_004",
+    hisp_pop = "B03002_012"
+  ),
+  state = "PA",
+  county = "Philadelphia",
+  year = 2022,
+  output = "wide"
+) %>%
+  select(
+    GEOID, total_popE, white_popE, black_popE, hisp_popE
+  ) %>% 
+  mutate(
+    w_pct = round(((white_popE / total_popE) * 100), digits = 2),
+    nw_pct = round(((1-(white_popE / total_popE)) * 100), digits = 2)
+  )
+
+tracts_race <- phl_tracts %>% 
+  left_join(phl_race, by = "GEOID") %>% 
+  select(GEOID, total_popE, white_popE, black_popE, hisp_popE, w_pct, nw_pct, geometry) %>% 
+  st_transform(., 3365)
+
+```
+
+**Questions to answer:**
+- What dataset did you choose and why?
+
+All Transit Routes (Spring 2025)
+- Latest data.  Used to show places that a line goes but does not stop.
+
+All Transit Stops (Spring 2025)
+- Latest data.  Used to show where lines stop.
+
+ACS 2022 (White, Black, Hispanic, Total Population) For Philadelphia Tracts
+- For racial demographic analysis later.
+
+Philadelphia Tracts
+- Good aerial unit for this type of analysis.
+
+- What is the data source and date?
+
+See above
+
+- How many features does it contain?
+
+atr_freqbus, 24 features (frequent SEPTA bus routes)
+
+ats_freqbus, 3784 features (frequent SEPTA bus stops)
+
+atr_rail, 13 features (SEPTA non-regional rail lines)
+
+ats_rail, 826 features (SEPTA non-regional rail stops)
+
+phl_tracts, 408 features (Philadelphia County census tracts)
+
+phl_race, 408 features (Racial data for PHL tracts)
+
+- What CRS is it in? Did you need to transform it?
+
+All transformed to EPSG 3365 (PA South).
+
+---
+
+2. **Pose a research question**
+
+Write a clear research statement that your analysis will answer.
+
+How well served are non-white majority tracts by SEPTA's most frequent and reliable bus and metro routes?
+
+---
+
+3. **Conduct spatial analysis**
+
+Use at least TWO spatial operations to answer your research question.
+
+**Required operations (choose 2+):**
+- Buffers
+- Spatial joins
+- Spatial filtering with predicates
+- Distance calculations
+- Intersections or unions
+- Point-in-polygon aggregation
+
+**Your Task:**
+```{r}
+# Your spatial analysis
+
+#Intersections of Tracts and Lines, Uses Buffers and Intersections
+
+tract_service <- tracts_race %>% 
+  mutate(
+    r_touched = ifelse(
+      lengths(st_intersects(geometry, st_buffer(atr_rail, 30))) > 0,
+      "Y",
+      "N"
+    ),
+    b_touched = ifelse(
+      lengths(st_intersects(geometry, st_buffer(atr_freqbus, 30))) > 0,
+      "Y",
+      "N"
+    ),
+    r_served = ifelse(
+      lengths(st_intersects(geometry, ats_rail)) > 0,
+      "Y",
+      "N"
+    ),
+    b_served = ifelse(
+      lengths(st_intersects(geometry, ats_freqbus)) > 0,
+      "Y",
+      "N"
+    ),
+    underserved = case_when(
+      r_touched == "N" & b_touched == "N" & r_served == "N" & b_served == "N" ~ "NBNR",
+      b_touched == "N" & b_served == "N" ~ "NB",
+      r_touched == "N" & r_served == "N" ~ "NR",
+      r_touched == "Y" & r_served == "N" ~ "RPOSS",
+      b_touched == "Y" & b_served == "N" ~ "BPOSS",
+      TRUE ~ "SERVED"
+    ),
+    underserved_neat = case_when(
+      r_touched == "N" & b_touched == "N" & r_served == "N" & b_served == "N" ~ "No Service",
+      b_touched == "N" & b_served == "N" ~ "No Buses",
+      r_touched == "N" & r_served == "N" ~ "No Rail",
+      r_touched == "Y" & r_served == "N" ~ "Rail Line Without Stop",
+      b_touched == "Y" & b_served == "N" ~ "Bus Line Without Stop",
+      TRUE ~ "Served"
+    )
+  ) 
+
+#Summarize
+
+service_summary <- tract_service %>% 
+  group_by(underserved_neat) %>% 
+  summarize(
+    tract_count = n(),
+    avg_nw_pct = mean(nw_pct, na.rm = TRUE)
+  )
+
+kable(
+  service_summary %>% st_drop_geometry(),
+  col.names = c(
+    "Service Level",
+    "Tract Count",
+    "Avg. % of Pop. Non-White"
+  ),
+  caption = "Philadelphia Tract Service Levels And Non-White Population Share",
+  format.args = list(big.mark = ",")
+)
+
+
+
+```
+
+```{r}
+#Visualization 1, Transit Map
+
+#Clip lines to county boundaries for visualization
+
+ats_freqbus <- ats_freqbus %>% 
+  mutate(in_phl = ifelse(lengths(st_within(geometry, phl_county)) > 0, "Y", "N"))
+
+ats_rail <- ats_rail %>% 
+  mutate(in_phl = ifelse(lengths(st_within(geometry, phl_county)) > 0, "Y", "N"))
+
+atr_freqbus_phl <- st_intersection(atr_freqbus, phl_county)
+
+atr_rail_phl <- st_intersection(atr_rail, phl_county)
+
+ggplot() +
+  geom_sf(
+    data = atr_freqbus,
+    aes(color = "Suburban Bus Lines"),
+    size = 0.5
+  ) +
+  geom_sf(
+    data = atr_rail,
+    aes(color = "Suburban Rail Lines"),
+    size = 0.5
+  ) +
+  geom_sf(
+    data = tracts_race,
+    fill = "gray90",
+    color = "white",
+    size = 0.3
+  ) +
+  geom_sf(
+    data = atr_freqbus_phl,
+    aes(color = "City Bus Lines"),
+    size = 0.5
+  ) + 
+  geom_sf(
+    data = atr_rail_phl,
+    aes(color = "City Rail Lines"),
+    size = 0.5
+  ) +
+  geom_sf(
+    data = ats_freqbus,
+    aes(
+      color = ifelse(in_phl == "Y", "City Bus Stops", "Suburban Bus Stops"),
+      fill = ifelse(in_phl == "Y", "City Bus Stops", "Suburban Bus Stops")
+    ),
+    size = 0.5,
+    shape = 21
+  ) +
+  geom_sf(
+    data = ats_rail,
+    aes(color = ifelse(in_phl == "Y", "City Rail Stops", "Suburban Rail Stops"),
+        fill = ifelse(in_phl == "Y", "City Rail Stops", "Suburban Rail Stops")
+    ),
+    size = 0.5,
+    shape = 21
+  ) +
+  geom_sf(
+    data = phl_county,
+    fill = NA,
+    color = "black",
+    size = 1
+  ) +
+  coord_sf(clip = "off") +
+  scale_color_manual(
+    name = NULL,
+    values = c(
+      "Suburban Bus Lines" = "gray",
+      "Suburban Rail Lines" = "gray20",
+      "City Bus Lines" = "#1f78b4",
+      "City Rail Lines" = "#ff7f00",
+      "City Bus Stops" = "#1f78b4",
+      "City Rail Stops" = "#ff7f00",
+      "Suburban Bus Stops" = "gray",
+      "Suburban Rail Stops" = "gray20"
+    ),
+    breaks = c(
+      "City Bus Lines",
+      "City Bus Stops",
+      "City Rail Lines",
+      "City Rail Stops",
+      "Suburban Bus Lines",
+      "Suburban Bus Stops",
+      "Suburban Rail Lines",
+      "Suburban Rail Stops"
+    )
+  ) +
+  scale_fill_manual(
+    name = NULL,
+    values = c(
+      "City Bus Stops" = "gray90",
+      "City Rail Stops" = "gray90",
+      "Suburban Bus Stops" = "white",
+      "Suburban Rail Stops" = "white"
+    ),
+    guide = "none"
+  ) +
+  labs(
+    title = "Philadelphia Frequent Bus And Rail Transit Network",
+    caption = "Source: ACS 2018-2022, OpenDataPhilly"
+  ) +
+  annotation_scale(
+    location = "bl",
+    width_hint = 0.5,
+    pad_x = unit(2, "cm"),
+    pad_y = unit(-1.2, "cm"),
+    unit_category = "imperial",
+    style = "ticks",
+    text_family = "ubuntu"
+  ) +
+  annotation_north_arrow(
+    location = "bl",
+    pad_x = unit(0, "cm"),
+    pad_y = unit(-1.5, "cm"),
+    style = north_arrow_fancy_orienteering(text_family = "ubuntu")
+  ) +
+  theme_void() +
+  theme(
+    text = element_text(family = "ubuntu"),
+    plot.title = element_text(
+      family = "ubuntu",
+      size = 16,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      family = "ubuntu",
+      size = 8,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.title.position = "plot",
+    plot.caption = element_text(
+      family = "ubuntu",
+      size = 8,
+      color = "grey60",
+      hjust = 1,
+      margin = margin(t = 1, unit = "cm")
+    ),
+    plot.caption.position = "plot",
+    legend.position = "right",
+    legend.text = element_text(
+      family = "ubuntu",
+      size = 9
+    ),
+    plot.margin = margin(20, 0, 20, 0)
+  )
+
+```
+
+```{r}
+
+#Visualization 2: Underserved Tract Map
+
+ggplot() +
+  geom_sf(
+    data = atr_freqbus,
+    aes(color = "Suburban Bus"),
+    size = 0.5
+  ) +
+  geom_sf(
+    data = atr_rail,
+    aes(color = "Suburban Rail"),
+    size = 0.5
+  ) +
+  geom_sf(
+    data = tract_service,
+    aes(fill = nw_pct),
+    color = "white",
+    size = 0.3
+  ) +
+  geom_sf(
+    data = atr_freqbus_phl,
+    aes(color = "City Bus"),
+    size = 0.5
+  ) + 
+  geom_sf(
+    data = atr_rail_phl,
+    aes(color = "City Rail"),
+    size = 0.5
+  ) +
+  geom_sf(
+    data = phl_county,
+    fill = NA,
+    color = "black",
+    size = 1
+  ) +
+  coord_sf(clip = "off") +
+  scale_color_manual(
+    name = "Transit Lines",
+    values = c(
+      "Suburban Bus" = "gray90",
+      "Suburban Rail" = "gray70",
+      "City Bus" = "gray30",
+      "City Rail" = "gray15"
+    ),
+    breaks = c(
+      "City Bus",
+      "City Rail",
+      "Suburban Bus",
+      "Suburban Rail"
+    )
+  ) +
+  scale_fill_viridis_c(
+    name = "% Non-White Pop.",
+    labels = percent,
+    option = "cividis"
+  ) +
+  labs(
+    title = "Philadelphia Frequent Bus And Rail Transit Network\nCompared To Tracts By Non-White Population",
+    caption = "Source: ACS 2018-2022, OpenDataPhilly"
+  ) +
+  annotation_scale(
+    location = "bl",
+    width_hint = 0.5,
+    pad_x = unit(2, "cm"),
+    pad_y = unit(-1.2, "cm"),
+    unit_category = "imperial",
+    style = "ticks",
+    text_family = "ubuntu"
+  ) +
+  annotation_north_arrow(
+    location = "bl",
+    pad_x = unit(0, "cm"),
+    pad_y = unit(-1.5, "cm"),
+    style = north_arrow_fancy_orienteering(text_family = "ubuntu")
+  ) +
+  theme_void() +
+  theme(
+    text = element_text(family = "ubuntu"),
+    plot.title = element_text(
+      family = "ubuntu",
+      size = 16,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      family = "ubuntu",
+      size = 8,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.title.position = "plot",
+    plot.caption = element_text(
+      family = "ubuntu",
+      size = 8,
+      color = "grey60",
+      hjust = 1,
+      margin = margin(t = 1, unit = "cm")
+    ),
+    plot.caption.position = "plot",
+    legend.position = "right",
+    legend.text = element_text(
+      family = "ubuntu",
+      size = 9
+    ),
+    plot.margin = margin(20, 0, 20, 0)
+  )
+
+```
+
+
+```{r}
+
+#Visualization 3: Transit Deserts By Type
+
+ggplot() +
+  geom_sf(
+    data = tract_service,
+    aes(
+      fill = case_when(
+        underserved == "SERVED" ~ "Served",
+        underserved == "RPOSS" ~ "Rail Line Without Stop",
+        underserved == "NR" ~ "No Rail Service",
+        underserved == "BPOSS" ~ "Bus Line Without Stop",
+        underserved == "NB" ~ "No Bus Service",
+        underserved == "NBNR" ~ "No Service"
+      )
+    ),
+    color = "white",
+    size = 0.3
+  ) +
+  geom_sf(
+    data = phl_county,
+    fill = NA,
+    color = "black",
+    size = 1
+  ) +
+  coord_sf(clip = "off") +
+  scale_fill_manual(
+    name = "Service Levels",
+    values = c(
+      "No Service" = "#800026",
+      "No Bus Service" = "#e31a1c",
+      "No Rail Service" = "#fd8d3c",
+      "Rail Line Without Stop" = "#fed976",
+      "Bus Line Without Stop" = "#ffffcc",
+      "Served" = "gray90"
+    ),
+    breaks = c(
+      "No Service",
+      "No Bus Service",
+      "No Rail Service",
+      "Rail Line Without Stop",
+      "Bus Line Without Stop",
+      "Served"
+    )
+  ) +
+  labs(
+    title = "Philadelphia Frequent Bus And Rail Transit Network\nService Gaps By Severity",
+    caption = "Source: ACS 2018-2022, OpenDataPhilly"
+  ) +
+  annotation_scale(
+    location = "bl",
+    width_hint = 0.5,
+    pad_x = unit(2, "cm"),
+    pad_y = unit(-1.2, "cm"),
+    unit_category = "imperial",
+    style = "ticks",
+    text_family = "ubuntu"
+  ) +
+  annotation_north_arrow(
+    location = "bl",
+    pad_x = unit(0, "cm"),
+    pad_y = unit(-1.5, "cm"),
+    style = north_arrow_fancy_orienteering(text_family = "ubuntu")
+  ) +
+  theme_void() +
+  theme(
+    text = element_text(family = "ubuntu"),
+    plot.title = element_text(
+      family = "ubuntu",
+      size = 16,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      family = "ubuntu",
+      size = 8,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.title.position = "plot",
+    plot.caption = element_text(
+      family = "ubuntu",
+      size = 8,
+      color = "grey60",
+      hjust = 1,
+      margin = margin(t = 1, unit = "cm")
+    ),
+    plot.caption.position = "plot",
+    legend.position = "right",
+    legend.text = element_text(
+      family = "ubuntu",
+      size = 9
+    ),
+    plot.margin = margin(20, 0, 20, 0)
+  )
+
+```
+``` {r}
+#Visualization 4: Minority Tracts With No Transit Service
+
+ggplot() +
+  geom_sf(
+    data = tract_service,
+    aes(
+      fill = ifelse(
+        nw_pct > 50 & underserved == "NBNR",
+        "Non-White Majority Without Service",
+        "All Others"
+      )
+    ),
+    color = "white",
+    size = 0.3
+  ) +
+  geom_sf(
+    data = phl_county,
+    fill = NA,
+    color = "black",
+    size = 1
+  ) +
+  coord_sf(clip = "off") +
+  scale_fill_manual(
+    name = "Tracts",
+    values = c(
+      "Non-White Majority Without Service" = "#800026",
+      "All Others" = "gray90"
+    ),
+    breaks = c(
+      "Non-White Majority Without Service",
+      "All Others"
+    )
+  ) +
+  labs(
+    title = "Philadelphia Tracts With Non-White Majority\nLacking Frequent Bus and Rail Transit Service",
+    caption = "Source: ACS 2018-2022, OpenDataPhilly"
+  ) +
+  annotation_scale(
+    location = "bl",
+    width_hint = 0.5,
+    pad_x = unit(2, "cm"),
+    pad_y = unit(-1.2, "cm"),
+    unit_category = "imperial",
+    style = "ticks",
+    text_family = "ubuntu"
+  ) +
+  annotation_north_arrow(
+    location = "bl",
+    pad_x = unit(0, "cm"),
+    pad_y = unit(-1.5, "cm"),
+    style = north_arrow_fancy_orienteering(text_family = "ubuntu")
+  ) +
+  theme_void() +
+  theme(
+    text = element_text(family = "ubuntu"),
+    plot.title = element_text(
+      family = "ubuntu",
+      size = 16,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.subtitle = element_text(
+      family = "ubuntu",
+      size = 8,
+      face = "bold",
+      margin = margin(b = 5),
+      hjust = 0.5
+    ),
+    plot.title.position = "plot",
+    plot.caption = element_text(
+      family = "ubuntu",
+      size = 8,
+      color = "grey60",
+      hjust = 1,
+      margin = margin(t = 1, unit = "cm")
+    ),
+    plot.caption.position = "plot",
+    legend.position = "right",
+    legend.text = element_text(
+      family = "ubuntu",
+      size = 9
+    ),
+    plot.margin = margin(20, 0, 20, 0)
+  )
+
+
+```
+
+**Analysis requirements:**
+- Clear code comments explaining each step
+- Appropriate CRS transformations
+- Summary statistics or counts
+- At least one map showing your findings
+- Brief interpretation of results (3-5 sentences)
+
+**Your interpretation:**
+
+I went into this analysis thinking that Philadelphia would be more like Chicago with its transit system.  In Chicago, the mostly-white North Side has some of the best public transit in the country (featuring express/local rail service, multiple parallel lines for extra capacity, etc.).  However, Philadelphia appears to have very good coverage all over the city.  While rail coverage does not reach all portions, especially lacking in the north-west along Roosevelt Boulevard and the north-east (although this area is well served by regional rail routes), the places that the tracks and frequent buses do go tend to be the most heavily non-white tracts in the city.  There are a few very small pockets of majority non-white tracts that do not have either frequent bus or metro service, but all things considered they are quite few in number and, in most cases, are just within a short walk of a tract that is better served.  
+
+After summarizing the numbers, tracts with no service are only (on average) 49% non-white compared to the (on average) 73% non-white populations in served (both rail and frequent bus) tracts.  One possibility for this observed pattern (which goes against the popular theory of American urbanism which claims minority populations are dispraportionately underserved by quality public transportation), is the prevalence of legacy rail infrastructure in Philadelphia.  The Trolley routes (T1, 2, 3, 4, and 5, and G1) serve tracts that approach 100% non-white population share and provide a critical, high-capacity link to major job destinations in Center City and West Philadelphia or, in the case of the G1, other rapid transit connections to the L and Broad Street Lines.  This data showcases how much of a devastating loss it would have been to commuinties of color if Philadelphia had followed in the footsteps of nearly every other North American city and ripped up its trolley tracks.  We have already seen the consequences of funding crises on rail transit in Philly in the 1990s when several popular trolley routes (including Route 56, Route 23, and G1) were replaced with buses.  While G1 trolleys have returned, Routes 56 and 23 have not been so lucky.  Across the city their wires have been torn down and their tracks paved over, despite SEPTA's promise on the day of their suspension that the substitution with buses was merely temporary.  With this said, I think it is paramount that we continute to advocate for not just the preservation, but the improvement and expansion of these services which have been endangered by Republican state senators' refusal to fund SEPTA.
+
+## Finally - A few comments about your incorporation of feedback!
+Take a few moments to clean up your markdown document and then write a line or two or three about how you may have incorporated feedback that you recieved after your first assignment. 
+
+I've hidden the setup code, erased unnecessary instructions, and formatted all of my print functions as kables.
+
+---
+
+## Submission Requirements
+
+**What to submit:**
+
+1. **Rendered HTML document posted to your course portfolio** with all code, outputs, maps, and text
+   - Use `embed-resources: true` in YAML so it's a single file
+   - All code should run without errors
+   - All maps and charts should display correctly
+2. Submit the correct and working links of your assignment on Canvas
+
+---
+
