@@ -1,0 +1,60 @@
+---
+title: "Midterm"
+format: html
+editor: visual
+---
+
+## Quarto
+
+Quarto enables you to weave together content and executable code into a finished document. To learn more about Quarto see <https://quarto.org>.
+
+## Running Code
+
+When you click the **Render** button a document will be generated that includes both content and the output of embedded code. You can embed code like this:
+
+```{r}
+#| echo: false
+
+library(sf)
+library(ggplot2)
+library(here)
+library(tidyverse)
+library(knitr)
+library(caret)
+library(tidycensus)
+library(dplyr)
+library(tigris)
+```
+
+You can add options to executable code like this
+
+```{r}
+
+```
+
+The `echo: false` option disables the printing of code (only output is displayed).
+
+```{r}
+
+data <- read.csv(here("lab/lab_3-midterm/data/opa_properties_public.csv"))
+
+head(data)
+
+data_filtered <- data %>% 
+  filter(
+    startsWith(sale_date, "2023") |
+    startsWith(sale_date, "2024") |
+    startsWith(sale_date, "2025")
+  ) %>% 
+  filter(
+    category_code_description == "SINGLE FAMILY"
+  )
+
+data_spat <- data_filter <- 
+  st_as_sf(
+  
+)
+
+
+unique(data$category_code_description)
+```
