@@ -1,0 +1,656 @@
+---
+title: "Lab 4: Spatial Predictive Analysis"
+subtitle: "Analyzing 311 Violations"
+author: "Parker Otto"
+date: today
+format: 
+  html:
+    code-fold: false
+    toc: true
+    toc-location: left
+    theme: darkly
+    embed-resources: true
+execute:
+  warning: false
+  message: false
+---
+
+## Assignment Overview
+
+In this lab, you will apply the spatial predictive modeling techniques demonstrated 
+in the class exercise using a different 311 service request type of your choice as the predictor variable. You will build a complete spatial predictive model, document your process, and interpret your results.
+
+### Learning Objectives
+
+By completing this assignment, you will demonstrate your ability to:
+
+- Adapt example code to analyze a new dataset
+- Build spatial features for predictive modeling
+- Apply count regression techniques to spatial data
+- Implement spatial cross-validation
+- Interpret and communicate model results
+- Critically evaluate model performance
+
+---
+
+## Step 1: Choose Your 311 Violation Type
+
+### Getting the Data
+
+Visit the Chicago 311 Service Requests dataset:
+
+<https://data.cityofchicago.org/stories/s/311-Dataset-Changes-12-11-2018/d7nq-5g7t>
+
+Browse the available service request types (e.g., Graffiti Removal, Pothole Repair, Street Light Out, Sanitation Code Violations, etc.) and **choose one violation type** that interests you.
+
+### Requirements for Your Choice
+
+- Choose a **different** violation type than the abandoned cars we did in class.
+---
+
+## Step 2: Complete the Analysis
+
+Using the class exercise as your template, adapt the code to analyze your chosen 311 violation type.
+
+### What to Include
+
+Work through all major sections of the analysis:
+
+```{r setup}
+#| message: false
+#| warning: false
+
+# Load required packages
+library(tidyverse)      # Data manipulation
+library(sf)             # Spatial operations
+library(here)           # Relative file paths
+library(viridis)        # Color scales
+library(terra)          # Raster operations (replaces 'raster')
+library(spdep)          # Spatial dependence
+library(FNN)            # Fast nearest neighbors
+library(MASS)           # Negative binomial regression
+library(patchwork)      # Plot composition (replaces grid/gridExtra)
+library(knitr)          # Tables
+library(kableExtra)     # Table formatting
+library(classInt)       # Classification intervals
+library(ggspatial)
+library(spatstat.geom)
+library(spatstat.explore)
+
+# Set options
+options(scipen = 999)  # No scientific notation
+set.seed(5080)         # Reproducibility, could be any number
+
+# Create consistent theme for visualizations
+theme_vacbldgs <- function(base_size = 11) {
+  theme_minimal(base_size = base_size) +
+    theme(
+      plot.title = element_text(face = "bold", size = base_size + 1),
+      plot.subtitle = element_text(color = "gray30", size = base_size - 1),
+      legend.position = "right",
+      panel.grid.minor = element_blank(),
+      axis.text = element_blank(),
+      axis.title = element_blank()
+    )
+}
+
+# Set as default
+theme_set(theme_vacbldgs())
+
+
+```
+
+#### Part 1: Data Loading & Exploration
+- Load your 311 data and Chicago spatial boundaries
+- Create visualizations showing the spatial distribution of your violation type
+- Describe patterns you observe
+
+```{r load-boundaries}
+#| message: false
+
+# Load police districts (used for spatial cross-validation)
+policeDistricts <- 
+  st_read("https://data.cityofchicago.org/api/geospatial/24zt-jpfn?method=export&format=GeoJSON") %>%
+  st_transform('ESRI:102271') %>%
+  dplyr::select(District = dist_num)
+
+# Load police beats (smaller administrative units)
+policeBeats <- 
+  st_read("https://data.cityofchicago.org/api/geospatial/n9it-hstw?method=export&format=GeoJSON") %>%
+  st_transform('ESRI:102271') %>%
+  dplyr::select(Beat = beat_num)
+
+# Load Chicago boundary
+chicagoBoundary <- 
+  st_read("https://raw.githubusercontent.com/urbanSpatial/Public-Policy-Analytics-Landing/master/DATA/Chapter5/chicagoBoundary.geojson") %>%
+  st_transform('ESRI:102271')
+
+cat("✓ Loaded spatial boundaries\n")
+cat("  - Police districts:", nrow(policeDistricts), "\n")
+cat("  - Police beats:", nrow(policeBeats), "\n")
+
+# Load 311 Abandoned or Vacant Building Reports
+vac_bldgs <- read.csv(here("lab/lab_4/data/vac_bldgs.csv"))
+
+vac_bldgs <- vac_bldgs %>% drop_na(LATITUDE)
+
+sf_vac_bldgs <- st_as_sf(
+  vac_bldgs,
+  coords = c("LONGITUDE", "LATITUDE"),
+  crs = 4326
+) %>% 
+  st_transform('ESRI:102271') %>% 
+  mutate(
+    year = str_sub(DATE.SERVICE.REQUEST.WAS.RECEIVED, -4, -1)
+  ) %>% 
+  filter(year == "2018")
+
+```
+
+```{r burglary-stuff}
+
+burglaries <- st_read("data/burglaries.shp") %>% 
+  st_transform('ESRI:102271')
+
+```
+
+```{r visuals}
+
+p1 <- ggplot(chicagoBoundary) +
+  geom_sf(
+    fill = NA,
+    color = "black",
+    size = 1
+  ) +
+  geom_sf(
+    data = policeDistricts,
+    fill = "gray80",
+    color = "gray20",
+    size = 0.3
+  ) +
+  geom_sf(
+    data = sf_vac_bldgs,
+    size = 0.1,
+    color = "orange"
+  ) +
+  labs(
+    title = "Vacant Building Locations"
+  ) +
+   annotation_scale(
+    location = "bl",
+    width_hint = 0.5,
+    pad_x = unit(-0.3, "cm"),
+    pad_y = unit(0, "cm"),
+    unit_category = "metric",
+    style = "ticks",
+  ) +
+  annotation_north_arrow(
+    location = "bl",
+    pad_x = unit(-2, "cm"),
+    pad_y = unit(-0.5, "cm"),
+    style = north_arrow_fancy_orienteering()
+  ) +
+  coord_sf(clip = "off") +
+  theme_void() +
+  theme(
+    plot.title = element_text(
+      size = 12,
+      hjust = 0.5,
+      face = "bold"
+    ),
+    plot.subtitle = element_text(
+      hjust = 0.5,
+      face = "bold"
+    ),
+    plot.margin = margin(20, -0, 20, 0)
+  )
+
+p2 <- ggplot(chicagoBoundary) +
+  geom_sf(
+    fill = NA,
+    color = "black",
+    size = 1
+  ) +
+  geom_sf(
+    data = policeDistricts,
+    fill = "gray80",
+    color = "gray20",
+    size = 0.3
+  ) +
+  geom_density_2d_filled(
+    data = data.frame(st_coordinates(sf_vac_bldgs)),
+    aes(X, Y),
+    alpha = 0.7,
+    bins = 8
+  ) +
+  scale_fill_viridis_d(
+    option = "plasma",
+    direction = -1,
+    guide = "none"
+  ) +
+  labs(
+    title = "Density Surface",
+    subtitle = "Kernel Density Estimation",
+  ) +
+   annotation_scale(
+    location = "bl",
+    width_hint = 0.5,
+    pad_x = unit(-0.3, "cm"),
+    pad_y = unit(0, "cm"),
+    unit_category = "metric",
+    style = "ticks",
+  ) +
+  annotation_north_arrow(
+    location = "bl",
+    pad_x = unit(-2, "cm"),
+    pad_y = unit(-0.5, "cm"),
+    style = north_arrow_fancy_orienteering()
+  ) +
+  coord_sf(clip = "off") +
+  theme_void() +
+  theme(
+    plot.title = element_text(
+      size = 12,
+      hjust = 0.5,
+      face = "bold"
+    ),
+    plot.subtitle = element_text(
+      hjust = 0.5,
+      face = "bold"
+    ),
+    plot.margin = margin(20, -0, 20, 0)
+  )
+
+plot_spacer() + p1 + plot_spacer() + p2 +
+  plot_annotation(
+    title = "Spatial Distribution of Vacant / Abandoned Buildings in Chicago (2018)",
+    caption = "Data from the Chicago Open Data Portal",
+    tag_levels = 'A',
+    theme = theme(
+      plot.title = element_text(
+        hjust = 0.5,
+        size = 14,
+        face = "bold"
+      )
+    )
+  ) +
+  plot_layout(widths = c(0.1, 1, 0.1, 1))
+
+```
+
+Part 1 Response:
+
+The spatial pattern of 311 reported building vacancies / abandoment in 2018 clearly shows clustering of observations on Chicago's South Side and West Side.  Both of these areas are predominantly Black and have experienced extreme disinvestment historically (post-1940 when these areas shifted demographically from white to Black).
+
+
+#### Part 2: Fishnet Grid Creation
+- Create a 500m x 500m fishnet grid
+- Aggregate your violations to grid cells
+- Visualize the count distribution
+
+
+```{r create-fishnet}
+
+# 500m grid
+
+fishnet <- st_make_grid(
+  chicagoBoundary,
+  cellsize = 500,
+  square = TRUE
+) %>% 
+  st_sf() %>% 
+  mutate(uniqueID = row_number()) %>% 
+  st_transform('ESRI:102271')
+
+# Keep cells intersecting Chicago
+
+fishnet <- fishnet[chicagoBoundary, ]
+
+# View basic info
+cat("✓ Created fishnet grid\n")
+cat("  - Number of cells:", nrow(fishnet), "\n")
+cat("  - Cell size:", 500, "x", 500, "meters\n")
+cat("  - Cell area:", round(st_area(fishnet[1,])), "square meters\n")
+
+```
+```{r aggregate-vacancies}
+
+# Spatial Join
+
+vac_fishnet <- st_join(sf_vac_bldgs, fishnet, join = st_within) %>% 
+  st_drop_geometry() %>% 
+  group_by(uniqueID) %>% 
+  summarize(countVacant = n())
+
+# Join back to fishnet
+
+fishnet <- fishnet %>% 
+  left_join(vac_fishnet, by = "uniqueID") %>% 
+  mutate(countVacant = replace_na(countVacant, 0))
+
+# Summary stats
+
+cat("\nBuilding vacancy or abandonment count distribution (2018):\n")
+summary(fishnet$countVacant)
+cat("\nCells with no 311 reported vacancies or abandonments:", 
+    sum(fishnet$countVacant == 0), 
+    "/", nrow(fishnet),
+    "(", round(100 * sum(fishnet$countVacant == 0) / nrow(fishnet), 1), "%)\n")
+
+```
+
+```{r visualize-fishnet}
+
+# Visualize aggregated counts
+ggplot() +
+  geom_sf(data = fishnet, aes(fill = countVacant), color = NA) +
+  geom_sf(data = chicagoBoundary, fill = NA, color = "white", linewidth = 1) +
+  scale_fill_viridis_c(
+    name = "Vacancies or Abandonments",
+    option = "plasma",
+    trans = "sqrt",  # Square root for better visualization of skewed data
+    breaks = c(0, 1, 5, 10, 20, 40)
+  ) +
+  labs(
+    title = "Building Vacancy or Abandonment Counts by Grid Cell",
+    subtitle = "500m x 500m cells, Chicago 2018"
+  ) +
+  theme_vacbldgs()
+
+```
+
+
+#### Part 3: Spatial Features
+- Calculate k-nearest neighbor features
+- Perform Local Moran's I analysis
+- Identify hot spots and cold spots
+- Create distance-to-hotspot measures
+- Join any additional contextual data if you are looking for more to do and really get into this (e.g., demographics, land use)
+
+
+```{r nn-feature}
+
+# Calc mean dist to 3 nearest reported bldgs
+
+# Get coords
+fishnet_coords <- st_coordinates(st_centroid(fishnet))
+vac_coords <- st_coordinates(sf_vac_bldgs)
+
+# Calc knn and dists
+
+nn_result <- get.knnx(vac_coords, fishnet_coords, k = 3)
+
+# add to fishnet
+fishnet <- fishnet %>% 
+  mutate(
+    vac_bldgs.nn = rowMeans(nn_result$nn.dist)
+  )
+
+cat("✓ Calculated nearest neighbor distances\n")
+summary(fishnet$vac_bldgs.nn)
+
+```
+
+```{r local-morans}
+
+# Local Moran's I Fn
+calculate_local_morans <- function(data, variable, k = 5) {
+  
+  # Create spatial weights
+  coords <- st_coordinates(st_centroid(data))
+  neighbors <- knn2nb(knearneigh(coords, k = k))
+  weights <- nb2listw(neighbors, style = "W", zero.policy = TRUE)
+  
+  # Calc Local MI
+  local_moran <- localmoran(data[[variable]], weights)
+  
+  # Classify clusters
+  mean_val <- mean(data[[variable]], na.rm = TRUE)
+  
+  data %>% 
+    mutate(
+      local_i = local_moran[, 1],
+      p_value = local_moran[, 5],
+      is_significant = p_value < 0.05,
+      
+      moran_class = case_when(
+        !is_significant ~ "Not Significant",
+        local_i > 0 & .data[[variable]] > mean_val ~ "High-High",
+        local_i > 0 & .data[[variable]] <= mean_val ~ "Low-Low",
+        local_i < 0 & .data[[variable]] > mean_val ~ "High-Low",
+        local_i < 0 & .data[[variable]] <= mean_val ~ "Low-High",
+        TRUE ~ "Not Significant"
+      )
+    )
+}
+
+# Apply
+fishnet <- calculate_local_morans(fishnet, "countVacant", k = 5)
+
+```
+
+
+```{r visualize-morans}
+#| fig-width: 8
+#| fig-height: 6
+
+# Visualize hot spots
+ggplot() +
+  geom_sf(
+    data = fishnet, 
+    aes(fill = moran_class), 
+    color = NA
+  ) +
+  scale_fill_manual(
+    values = c(
+      "High-High" = "#d7191c",
+      "High-Low" = "#fdae61",
+      "Low-High" = "#abd9e9",
+      "Low-Low" = "#2c7bb6",
+      "Not Significant" = "gray90"
+    ),
+    name = "Cluster Type"
+  ) +
+  labs(
+    title = "Local Moran's I: Vacant or Abandoned Building Clusters",
+    subtitle = "High-High = Hot spots of disorder"
+  ) +
+  theme_vacbldgs()
+
+```
+```{r dist-to-hotspots}
+
+# Get centroids of "High-High" cells (hot spots)
+hotspots <- fishnet %>%
+  filter(moran_class == "High-High") %>%
+  st_centroid()
+
+# Calculate distance from each cell to nearest hot spot
+if (nrow(hotspots) > 0) {
+  fishnet <- fishnet %>%
+    mutate(
+      dist_to_hotspot = as.numeric(
+        st_distance(st_centroid(fishnet), hotspots %>% st_union())
+      )
+    )
+  
+  cat("✓ Calculated distance to vacant or abandoned building hot spots\n")
+  cat("  - Number of hot spot cells:", nrow(hotspots), "\n")
+} else {
+  fishnet <- fishnet %>%
+    mutate(dist_to_hotspot = 0)
+  cat("⚠ No significant hot spots found\n")
+}
+
+```
+
+
+#### Part 4: Count Regression Models
+- Fit Poisson regression
+- Fit Negative Binomial regression
+- Compare model fit (AIC)
+
+```{r join-districts}
+# Join district information to fishnet
+fishnet <- st_join(
+  fishnet,
+  policeDistricts,
+  join = st_within,
+  left = TRUE
+) %>%
+  filter(!is.na(District))  # Remove cells outside districts
+
+cat("✓ Joined police districts\n")
+cat("  - Districts:", length(unique(fishnet$District)), "\n")
+cat("  - Cells:", nrow(fishnet), "\n")
+```
+
+```{r prep-data}
+
+#Add burglary stuff
+
+burglaries_fishnet <- st_join(burglaries, fishnet, join = st_within) %>%
+  st_drop_geometry() %>%
+  group_by(uniqueID) %>%
+  summarize(countBurglaries = n()) 
+
+fishnet <- fishnet %>%
+  left_join(burglaries_fishnet, by = "uniqueID") %>%
+  mutate(countBurglaries = replace_na(countBurglaries, 0))
+
+#Create clean modeling dataset
+fishnet_model <- fishnet %>% 
+  st_drop_geometry() %>% 
+  dplyr::select(
+    uniqueID,
+    District,
+    countBurglaries,
+    countVacant,
+    vac_bldgs.nn,
+    dist_to_hotspot
+  ) %>% 
+  na.omit()
+
+```
+
+```{r fit-poisson}
+# Fit Poisson regression
+model_poisson <- glm(
+  countBurglaries ~ countVacant + vac_bldgs.nn + 
+    dist_to_hotspot,
+  data = fishnet_model,
+  family = "poisson"
+)
+
+# Summary
+summary(model_poisson)
+```
+
+#### Part 5: Spatial Cross-Validation (2017)
+- Implement Leave-One-Group-Out cross-validation on 2017 data
+- Calculate and report error metrics (MAE, RMSE)
+
+
+
+
+
+```{r}
+
+
+
+```
+
+
+#### Part 6: Model Evaluation
+- Compare to KDE baseline
+
+#### CHALLENGE TASK: Temporal Validation (2018) *not mandatory, only if you want very strong spatial analytics muscles*
+- Download 2018 crimes https://data.cityofchicago.org/Public-Safety/Crimes-2018/3i3m-jwuy/about_data
+- Be sure to filter for BURGLARIES (FORCED ENTRY only to match the 2017 data)
+- Aggregate 2018 violations to the same fishnet grid
+- Use your 2017 model to predict 2018 counts
+- Calculate temporal validation metrics
+- Compare spatial vs. temporal validation performance
+
+---
+
+## Step 3: Write Your Analysis
+
+### Critical Requirement: Explain Each Step
+
+**For each major section, you must explain in your own words:**
+
+- **What** you are doing in that step
+- **Why** this step is important for the analysis
+- **What** you found or learned from the results
+
+Do not simply copy text from the example or from your AI friend. 
+Think about the purpose of each technique and articulate it in your own words.
+
+---
+
+## Step 4: Format Your Document
+
+### Formatting Requirements
+
+Your rendered HTML document should be **professional and easy to read**:
+
+#### ✓ Clean Code
+- Remove unnecessary code, comments, or debugging lines
+- Keep only essential code chunks
+- Use `code-fold: show` in your YAML header
+
+#### ✓ Clear Structure
+- Use headers to organize sections
+- Include a table of contents
+- Add your name and date
+
+#### ✓ Readable Text
+- Ensure all text renders properly (no broken markdown)
+- Check that headers appear as headers (not plain text)
+- Use proper markdown formatting
+
+#### ✓ Quality Visualizations
+- All plots should have titles and labels
+- Maps should be readable
+- Use consistent color schemes
+
+#### ✓ Professional Presentation
+- Proofread for typos
+- Remove any "Your answer here" placeholders
+- Make sure all code runs without errors
+- Make IT NEAT. WE GOTTA LOOK GOOD HERE.
+
+---
+
+## Submission Checklist
+
+Before you submit, verify that your document includes:
+
+### Required Components
+
+- [ ] **Introduction**: Brief description of your chosen 311 violation type and why you selected it
+- [ ] **Data Exploration**: Maps and summary statistics of your violation data
+- [ ] **Fishnet Grid**: Successfully created and visualized grid with aggregated counts
+- [ ] **Spatial Features**: At least 2-3 spatial features calculated (k-NN, distance measures, etc.)
+- [ ] **Local Moran's I**: Spatial autocorrelation analysis with interpretation
+- [ ] **Count Regression**: Both Poisson and Negative Binomial models with comparison
+- [ ] **Spatial Cross-Validation**: LOGO CV implemented on 2017 data with reported metrics
+- [ ] **Temporal Validation**: 2018 data aggregated and tested with 2017 model(OPTIONAL.)
+- [ ] **Validation Comparison**: Comparison of spatial vs. temporal validation performance
+- [ ] **Model Comparison**: Your model vs. KDE baseline for 2018 predictions
+- [ ] **Error Analysis**: Maps and discussion of where model performs well/poorly
+- [ ] **Written Explanations**: Your own words explaining each step
+
+
+### Technical Requirements
+
+- [ ] Document knits to HTML without errors
+- [ ] Code is clean and well-organized
+- [ ] All visualizations display properly
+- [ ] Headers and formatting render correctly
+- [ ] File is named successfully posted to your website
+
+---
+
+
