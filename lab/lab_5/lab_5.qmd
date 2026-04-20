@@ -1105,7 +1105,7 @@ For Homework 5, you'll work either all byyyy yourself or in teams of 2 to:
     -   Check for any data structure changes
     -   Create the same 5 models
     -   Calculate MAE for each model
-    
+
 ```{r load-indego-q2}
 
 indegoq2 <- read_csv("indego-trips-2025-q2.csv")
@@ -1137,6 +1137,7 @@ table(indegoq2$passholder_type)
 table(indegoq2$bike_type)
 
 ```
+
 ```{r create-q2-time-bins}
 indegoq2 <- indegoq2 %>%
   mutate(
@@ -1204,6 +1205,7 @@ ggplot(hourly_patterns_q2, aes(x = hour, y = avg_trips, color = day_type)) +
   ) +
   plotTheme
 ```
+
 ```{r top_stations-q2}
 # Most popular origin stations
 top_stations_q2 <- indegoq2 %>%
@@ -1238,6 +1240,7 @@ ggplot() +
   ) +
   mapTheme
 ```
+
 ```{r join_census_to_stations-q2}
 
 # Create sf object for stations
@@ -1309,6 +1312,7 @@ ggplot() +
   mapTheme
 
 ```
+
 ```{r keep-stations-q2}
 # Identify which stations to keep
 valid_stations_q2 <- stations_census_q2 %>%
@@ -1394,6 +1398,7 @@ length(unique(trips_panel_q2$interval60))
 
 hist(trips_panel_q2$Trip_Count)
 ```
+
 ```{r complete-panel-q2}
 # Calculate expected panel size
 n_stations_q2 <- length(unique(trips_panel_q2$start_station))
@@ -1599,6 +1604,7 @@ model3_q2 <- lm(
 
 summary(model3_q2)
 ```
+
 ```{r model4-q2}
 model4_q2 <- lm(
   Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
@@ -1612,6 +1618,7 @@ model4_q2 <- lm(
 cat("Model 4Q2 R-squared:", summary(model4_q2)$r.squared, "\n")
 cat("Model 4Q2 Adj R-squared:", summary(model4_q2)$adj.r.squared, "\n")
 ```
+
 ```{r model5-q2}
 model5_q2 <- lm(
   Trip_Count ~ as.factor(hour) + dotw_simple + Temperature + Precipitation +
@@ -1749,7 +1756,7 @@ hp_q2 <- ggplot(hourly_patterns_q2, aes(x = hour, y = avg_trips, color = day_typ
 
 ```
 
-The pattern of MAE with the addition of new data between Q2 (spring) and Q1 (winter) trained models generally follows a similar trend, but the Q2 data produced models with higher overall MAE (i.e. models that performed worse) than the Q1 data models.  Additionally, including rush hour interaction with Q2 models actually led to a worse MAE than with Q1 (perhaps this could have something to do with rush hour participation differences between winter, when there is school, and late spring, when there may not be school for some). The temporal change in ridership during the weekday also changed between Q1 and Q2.  While the peak AM period saw a ~100 trip increase, the PM rush period saw a ~200 trip increase.  This could potentially be due to workers being more likely to take a leisurely bike home after sitting in the office all day (as opposed to biking in the morning, when they're potentially tired or wary of getting sweaty).  In Q2, it would appear that station fixed effects are the most important feature, as they increase adjusted R-squared without impacting MAE.
+The pattern of MAE with the addition of new data between Q2 (spring) and Q1 (winter) trained models generally follows a similar trend, but the Q2 data produced models with higher overall MAE (i.e. models that performed worse) than the Q1 data models. Additionally, including rush hour interaction with Q2 models actually led to a worse MAE than with Q1 (perhaps this could have something to do with rush hour participation differences between winter, when there is school, and late spring, when there may not be school for some). The temporal change in ridership during the weekday also changed between Q1 and Q2. While the peak AM period saw a \~100 trip increase, the PM rush period saw a \~200 trip increase. This could potentially be due to workers being more likely to take a leisurely bike home after sitting in the office all day (as opposed to biking in the morning, when they're potentially tired or wary of getting sweaty). In Q2, it would appear that station fixed effects are the most important feature, as they increase adjusted R-squared without impacting MAE.
 
 ## Part 2: Error Analysis
 
@@ -1885,15 +1892,13 @@ p2_q2 <- ggplot() +
 
 ```
 
-Prediction errors in Q2 2025 appear to be clustered in Center City.  Given that this clustering pattern matches a map of average demand for the same quarter, one hypothesis for why errors are clustered in Center City is that the model struggles to predict areas with high demand.  
+Prediction errors in Q2 2025 appear to be clustered in Center City. Given that this clustering pattern matches a map of average demand for the same quarter, one hypothesis for why errors are clustered in Center City is that the model struggles to predict areas with high demand.
 
 2.  **Temporal patterns:**
 
     -   When are errors highest?
     -   Do certain hours/days have systematic under/over-prediction?
     -   Are there seasonal patterns?
-
-
 
 ```{r temporal_errors-q2}
 # MAE by time of day and day type
@@ -1919,14 +1924,14 @@ ggplot(temporal_errors_q2, aes(x = time_of_day, y = MAE, fill = day_type)) +
   theme(axis.text.x = element_text(angle = 45, hjust = 1))
 ```
 
-Temporally, there appear to be more consistent errors during the evening and mid-day with more errors during the PM rush and weekday AM rush.  Overnight shows the lowest error amount with both weekend and weekday errors fairly consistent.  This pattern of errors somewhat matches demand (in that low errors and low demand are true for overnight and high error high demand is true for PM rush, evening, and AM weekday rush).  However, this demand pattern does not account for fairly high mid-day errors, as there is generally a cratering in the amount of rides taken at this time.  
+Temporally, there appear to be more consistent errors during the evening and mid-day with more errors during the PM rush and weekday AM rush. Overnight shows the lowest error amount with both weekend and weekday errors fairly consistent. This pattern of errors somewhat matches demand (in that low errors and low demand are true for overnight and high error high demand is true for PM rush, evening, and AM weekday rush). However, this demand pattern does not account for fairly high mid-day errors, as there is generally a cratering in the amount of rides taken at this time.
 
 3.  **Demographic patterns:**
 
     -   Relate errors to census characteristics
     -   Are certain communities systematically harder to predict?
     -   What are the equity implications?
-    
+
 ```{r errors_demographics-q2}
 #| message: false
 #| warning: false
@@ -1962,7 +1967,7 @@ ed_p3_q2 <- ggplot(station_errors_demo_q2, aes(x = Percent_White, y = MAE)) +
 (ed_p1_q2 | ed_p2_q2) / (ed_p3_q2 | plot_spacer())
 ```
 
-According to these graphs, the model has trouble predicting for areas in which the following groups live: high median income, low transit commuters, and majority white neighborhoods.  Interestingly, this appears to be the opposite problem that many of the other models built during this class face.  Perhaps this could be due to bike usage being more unpredictable for white, high-earning areas with low transit usage given the nature of those spaces.  These would likely be suburban and car-centric which would lead to people either not really biking (as it could be dangerous to do so) and if they do bike, it could be due to the presence of factors not included in the model (like rail-to-trails or dedicated bike lanes).
+According to these graphs, the model has trouble predicting for areas in which the following groups live: high median income, low transit commuters, and majority white neighborhoods. Interestingly, this appears to be the opposite problem that many of the other models built during this class face. Perhaps this could be due to bike usage being more unpredictable for white, high-earning areas with low transit usage given the nature of those spaces. These would likely be suburban and car-centric which would lead to people either not really biking (as it could be dangerous to do so) and if they do bike, it could be due to the presence of factors not included in the model (like rail-to-trails or dedicated bike lanes).
 
 ## Part 3: Feature Engineering & model improvement
 
@@ -2038,7 +2043,7 @@ stations_sf_q2_reproj <- stations_sf_q2_reproj %>%
 
 ```
 
-``` {r dist-to-trails}
+```{r dist-to-trails}
 
 trail_net <- st_read("Existing_Trails.geojson")
 
@@ -2104,6 +2109,7 @@ cat("Adj R-squared:", summary(model7_q2)$adj.r.squared, "\n")
 cat("Observations: ", nobs(model7_q2), "\n")
 
 ```
+
 ```{r calculate_mae-q2-with-m6}
 # Get predictions on test set
 
@@ -2171,7 +2177,8 @@ Write 1-2 paragraphs addressing:
     -   What assumptions might not hold in real deployment?
     -   How would you improve this with more time/data?
 
-After building these several models to predict station-level Indego trips, I would say that the final model's MAE of 0.69 is a low enough number to be a "good enough" model Indego to use (predicting on average +/- 0.69 trips is not a huge number, all else considered).  What I am not saying, though, is that this model *should* be used to place bike stations.  While environmental and temporal factors do show to impact the count of trips, philosophically these must not be the deciding factors on where to place access to bikes (after all, an Indego station during evening rush located in the middle lane of I-95 would not get any use).  While I attempted to capture more spatial variables with the two additions for models 6 and 7 (bike lane length within half a mile of the station, as in theory more people would ride a bike if they were on/near a bike lane, and trail distance, as in theory more people would ride a bike if they were near a trail), they are not even close to an exhaustive list of what makes biking attractive to individuals.  Further models should include data from OnTheMap to get average distance for work commutes per census tract that each Indego station is in, car crash data (either the count of crashes within a buffer or count of specifically crashes involving bikes and pedestrians).  Additional data that could be included are, based on my own experience with bikeshare, average distance from end station (or availability of docking stations within a buffer) as the biggest factor for me personally on if I take bikeshare is whether my destination has a dock close by.  Further, this model's training data is far from complete, given that it only accounts for one quarter at a time.  Perhaps it would be beneficial to plan for peak usage (spring-fall) and simply omit winter months (Dec-Feb) under the assumption that no matter how good the bike network, stations will be un(der)used during these times (although notably that is not the case in some European contexts).  I chose Q2 data as it was simply the next on the list, but further comparison of different segments of this data could be interesting (e.g. models trained on just winter, just march, the whole year, or Mar-Nov).
+After building these several models to predict station-level Indego trips, I would say that the final model's MAE of 0.69 is a low enough number to be a "good enough" model Indego to use (predicting with an average error of +/- 0.69 trips is not a huge discrepancy, all else considered). To use this data to redistribute bikes (i.e. take from low-demand stations and add to high-demand stations would probably be fine, as the MAE is small enough to be fairly accurate. The errors, however, should give Indego some pause before considering implementation. While the model does well to predict trip demand in areas where demand is low, the errors increase in high demand areas. This model would likely do well in telling Indego employees where to source bikes from, but not so well in telling them where to put thm. Further improvements would be needed to curb these errors in high-demand areas (such as safety metrics described in further detail below when considering the model's application for constructing new stations).
 
-At the end of the day, the model performs poorly in the high-demand, high-trip areas so there is relatively little risk of worsening existing disparities in bike access for disinvested neighborhoods and communities.  It is important for city leaders, planners, and the owners of Indego to understand that plopping a bike share station anywhere cannot make up for (1) lasting stigmas against cyclists, (2) valid fears of harm or death from car crashes or road rage, (3) car-centric scale and design, and much, much more.   To address the argument in favor of expanding Indego at all cost (e.g. "build it and they will come"), it is important to recognize that one would not build a series of dispersed parking lots complete with rental cars without building a high-quality network of streets to connect them.  Therefore, it is irresponsible to call for the simple expansion of bikeshare without first addressing the key barrier to Philadelphians getting on bikes in the first place: safety.
+The more interesting question and implication for this kind of model, though, is whether this model *should* be used to place *new* bike stations entirely. While environmental and temporal factors do show to impact the count of trips, philosophically these must not be the deciding factors on where to place access to bikes (after all, an Indego station during evening rush located in the middle lane of I-95 would not get any use). While I attempted to capture more spatial variables with the two additions for models 6 and 7 (bike lane length within half a mile of the station, as in theory more people would ride a bike if they were on/near a bike lane, and trail distance, as in theory more people would ride a bike if they were near a trail), they are not even close to an exhaustive list of what makes biking attractive to individuals. Further models should include data from OnTheMap to get average distance for work commutes per census tract that each Indego station is in, car crash data (either the count of crashes within a buffer or count of specifically crashes involving bikes and pedestrians). Additional data that could be included are, based on my own experience with bikeshare, average distance from end station (or availability of docking stations within a buffer) as the biggest factor for me personally on if I take bikeshare is whether my destination has a dock close by. Further, this model's training data is far from complete, given that it only accounts for one quarter at a time. Perhaps it would be beneficial to plan for peak usage (spring-fall) and simply omit winter months (Dec-Feb) under the assumption that no matter how good the bike network, stations will be un(der)used during these times (although notably that is not the case in some European contexts). I chose Q2 data as it was simply the next on the list, but further comparison of different segments of this data could be interesting (e.g. models trained on just winter, just march, the whole year, or Mar-Nov).
 
+At the end of the day, the model performs poorly in the high-demand, high-trip areas so there is relatively little risk of worsening existing disparities in bike access for disinvested neighborhoods and communities. It is important for city leaders, planners, and the owners of Indego to understand that plopping a bike share station anywhere cannot make up for (1) lasting stigmas against cyclists, (2) valid fears of harm or death from car crashes or road rage, (3) car-centric scale and design, and much, much more. To address the argument in favor of expanding Indego at all cost (e.g. "build it and they will come"), it is important to recognize that one would not build a series of dispersed parking lots complete with rental cars without building a high-quality network of streets to connect them. Therefore, it is irresponsible to call for the simple expansion of bikeshare without first addressing the key barrier to Philadelphians getting on bikes in the first place: safety.
