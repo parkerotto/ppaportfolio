@@ -5,7 +5,7 @@ author: "Parker Otto"
 date: today
 format: 
   html:
-    code-fold: false
+    code-fold: show
     toc: true
     toc-location: left
     theme: darkly
@@ -43,22 +43,14 @@ Visit the Chicago 311 Service Requests dataset:
 
 Browse the available service request types (e.g., Graffiti Removal, Pothole Repair, Street Light Out, Sanitation Code Violations, etc.) and **choose one violation type** that interests you.
 
-### Requirements for Your Choice
-
-- Choose a **different** violation type than the abandoned cars we did in class.
----
-
-## Step 2: Complete the Analysis
-
-Using the class exercise as your template, adapt the code to analyze your chosen 311 violation type.
-
-### What to Include
-
-Work through all major sections of the analysis:
+For this analysis, I chose to use vacant / abandoned building 311 reports as a predictor variable for burglaries in Chicago.  I chose this to test what (if any) impact this key feature of "broken window theory" has on a tangible (i.e. countable) measure of crime like burglaries.  In my current understanding of the theory and its use in planning literature, "broken window theory" is cited more in descriptions of urban decay creating a "bad vibe" for the neighborhood rather than exploring its impact on quantitative outcomes like burglaries.
 
 ```{r setup}
+#| echo: false
 #| message: false
 #| warning: false
+
+
 
 # Load required packages
 library(tidyverse)      # Data manipulation
@@ -69,6 +61,7 @@ library(terra)          # Raster operations (replaces 'raster')
 library(spdep)          # Spatial dependence
 library(FNN)            # Fast nearest neighbors
 library(MASS)           # Negative binomial regression
+library(ggplot2)
 library(patchwork)      # Plot composition (replaces grid/gridExtra)
 library(knitr)          # Tables
 library(kableExtra)     # Table formatting
@@ -278,9 +271,11 @@ plot_spacer() + p1 + plot_spacer() + p2 +
 
 ```
 
-Part 1 Response:
+##### Part 1 Response:
 
-The spatial pattern of 311 reported building vacancies / abandoment in 2018 clearly shows clustering of observations on Chicago's South Side and West Side.  Both of these areas are predominantly Black and have experienced extreme disinvestment historically (post-1940 when these areas shifted demographically from white to Black).
+In this initial step, I explored the data of vacant / abandoned buildings to see where the spatial clusters of 311 reports were in Chicago.  This exploration gives us a basic understanding of the distribution of our variables to inform our model building in later steps.
+
+The spatial pattern of 311 reported building vacancies / abandonment in 2018 clearly shows clustering of observations on Chicago's South Side and West Side.  Both of these areas are predominantly Black and have experienced extreme disinvestment historically (post-1940 when these areas shifted demographically from white to Black).
 
 
 #### Part 2: Fishnet Grid Creation
@@ -352,12 +347,14 @@ ggplot() +
     breaks = c(0, 1, 5, 10, 20, 40)
   ) +
   labs(
-    title = "Building Vacancy or Abandonment Counts by Grid Cell",
+    title = "Building Vacancy or Abandonment Counts\nBy Grid Cell",
     subtitle = "500m x 500m cells, Chicago 2018"
   ) +
   theme_vacbldgs()
 
 ```
+##### Part 2 Response:
+In this part, I created a 500 x 500 meter fishnet grid over the City of Chicago's boundaries to create an aerial unit for this analysis that is more consistent and objective than political boundaries (wards, police districts, community areas) or Census divisions (tracts, block groups, etc.).  After creating the grid, I joined the vacancy/abandonment data to it by recording the count of 311 observations within each cell and mapping the results.  This grid-based approach allows for us to see very small outliers (such as a sea of 0 observations followed by a single observation that is quite high, as in the area near Lake Calumet at the southern border of Chicago) that may not be visible in a KDE map.
 
 
 #### Part 3: Spatial Features
@@ -483,7 +480,10 @@ if (nrow(hotspots) > 0) {
 }
 
 ```
+##### Part 3 Response:
+In this part, I used Local Moran's I to map out clusters of spatial autocorrelation in the vacant/abandoned building reports to confirm the visual analyses done in the previous steps.  Unlike visual checks for clustering, this step permutes the data to check for cluster significance (the threshold we use here is a pseudo-p-value > 0.05).  The visualizations produced here confirm that there are significant clusters of 311 vacant/abandoned building reports on the city's South and West Sides.  Geographically, these areas are both predominantly Black and have been historically disinvested in (and continue to be disinvested in despite recent efforts from more progressive administrations).  What surprised me was that there was no significant cluster of low-low values on the North Side.  
 
+I also added a spatial variable to the fishnet dataset for use in the models later.  This was the average distance between each cell centroid and the 3 nearest observations of vacant/abandoned building 311 reports in meters.
 
 #### Part 4: Count Regression Models
 - Fit Poisson regression
@@ -546,33 +546,292 @@ model_poisson <- glm(
 summary(model_poisson)
 ```
 
-#### Part 5: Spatial Cross-Validation (2017)
-- Implement Leave-One-Group-Out cross-validation on 2017 data
-- Calculate and report error metrics (MAE, RMSE)
+```{r pd-overdispersion}
 
+# Calculate dispersion parameter
+dispersion <- sum(residuals(model_poisson, type = "pearson")^2) / 
+              model_poisson$df.residual
 
+cat("Dispersion parameter:", round(dispersion, 2), "\n")
+cat("Rule of thumb: >1.5 suggests overdispersion\n")
 
-
-
-```{r}
-
-
+if (dispersion > 1.5) {
+  cat("⚠ Overdispersion detected! Consider Negative Binomial model.\n")
+} else {
+  cat("✓ Dispersion looks okay for Poisson model.\n")
+}
 
 ```
 
 
+```{r negative-binomial-regression}
+
+model_nb <- glm.nb(
+  countBurglaries ~ countVacant + vac_bldgs.nn +
+    dist_to_hotspot,
+  data = fishnet_model
+)
+
+summary(model_nb)
+
+# Compare AIC (lower is better)
+cat("\nModel Comparison:\n")
+cat("Poisson AIC:", round(AIC(model_poisson), 1), "\n")
+cat("Negative Binomial AIC:", round(AIC(model_nb), 1), "\n")
+
+```
+##### Part 4 Response:
+In this part, I use Poisson regression and Negative Binomial Regression to attempt to predict burglary counts in a given fishnet grid cell using the count of vacant/abandoned building 311 reports, the cell's centroid's distance to the nearest 311 report, and the cell's distance to the nearest 311 report hotspot (a cell labeled as having high reports and whose neighbors also have high reports) found during the Local Moran's I analysis.  I also check for overdispersion, which resulted in a value of 3.22 which (since it's greater than the rule of thumb threshold of 1.5) implies overdispersion where the variance of our crime data is greater than the mean (breaking the Poisson asumption that variance and mean are equal).  Given my knowledge of Chicago, I believe that this overdispersion may be caused by contagion effects (in many cases, burglaries are done by groups of teenagers and young adults likely to not venture far from their local area).  Given the overdispersion detected, I also fit a Negative Binomial model which allows for extra variance.  I tested both models' quality by comparing the values of the Akaike Information Criterion for both, finding the Negative Binomial model to be of better quality given its lower value (7653.5 vs. 9071.7).  
+
+The results of the Negative Binomial model show that the count of vacant/abandoned building reports in a cell and the cell centroid's distance to the nearest vacant/abandoned building report were statistically significant predictors for the count of burglaries in a cell, while distance to a hotspot was not significant.  The interpretations of coefficients of significant predictors are as follows: (1) As the count of vacant/abandoned building 311 reports in a cell increases by 1, the predicted count of burglaries in that cell increases by 2.5248% holding all other variables constant and (2) as the average distance between a cells centroid and the 3 nearest vacant/abandoned building 311 reports increases by 1 meter, the predicted count of burglaries in that cell decreases by 0.159%.  To put the second predictor into a more appropriate scale for interpretation, I rescaled the coefficient with the following equation: exp(-0.001593618 * 1000) to get 0.2031115.  This means that as the cell's centroid's average distance to the 3 nearest neighboring vacant/abandoned building 311 reports increases by 1 kilometer, the predicted count of burglaries in that cell decreases by 79.69%.
+
+#### Part 5: Spatial Cross-Validation (2017)
+- Implement Leave-One-Group-Out cross-validation on 2017 data
+- Calculate and report error metrics (MAE, RMSE)
+
+```{r logocv}
+
+# Get unique districts
+districts <- unique(fishnet_model$District)
+cv_results <- tibble()
+
+cat("Running LOGO Cross-Validation...\n")
+
+for (i in seq_along(districts)) {
+  
+  test_district <- districts[i]
+  
+  # Split data
+  train_data <- fishnet_model %>% filter(District != test_district)
+  test_data <- fishnet_model %>% filter(District == test_district)
+  
+  # Fit model on training data
+  model_cv <- glm.nb(
+    countBurglaries ~ countVacant + vac_bldgs.nn + 
+      dist_to_hotspot,
+    data = train_data
+  )
+  
+  # Predict on test data
+  test_data <- test_data %>%
+    mutate(
+      prediction = predict(model_cv, test_data, type = "response")
+    )
+  
+  # Calculate metrics
+  mae <- mean(abs(test_data$countBurglaries - test_data$prediction))
+  rmse <- sqrt(mean((test_data$countBurglaries - test_data$prediction)^2))
+  
+  # Store results
+  cv_results <- bind_rows(
+    cv_results,
+    tibble(
+      fold = i,
+      test_district = test_district,
+      n_test = nrow(test_data),
+      mae = mae,
+      rmse = rmse
+    )
+  )
+  
+  cat("  Fold", i, "/", length(districts), "- District", test_district, 
+      "- MAE:", round(mae, 2), "\n")
+}
+
+# Overall results
+cat("\n✓ Cross-Validation Complete\n")
+cat("Mean MAE:", round(mean(cv_results$mae), 2), "\n")
+cat("Mean RMSE:", round(mean(cv_results$rmse), 2), "\n")
+
+```
+```{r cv-results-table}
+# Show results
+cv_results %>%
+  arrange(desc(mae)) %>%
+  kable(
+    digits = 2,
+    caption = "LOGO CV Results by District"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+##### Part 5 Response:
+
+In this part, I implemented Leave-One-Group-Out Cross Validation (LOGO-CV) and calculated the Mean Absolute Error (MAE) and Root Mean Squared Error (RMSE) to test how well the Negative Binomial model performs on new data.  Interestingly, the police districts that performed the worst in this assessment (had the highest RMSE and MAE) were Districts 3 (where the model is off on average 5.48 burglaries) and 12 (off by an average of 3.61 per cell).  Both of these districts are in active hotspots of intense gentrification.  District 3 covers the Woodlawn Community Area which is seeing rapidly intesified institutional spending for the Obama Presidential Library and expansion of the UChicago campus (particulary undergraduate housing).  Several new high-rises are actively under construction in the neighborhood and more have been built despite its significant decline between 1950 and 2010 where large swaths of its vacant (abandoned) housing was demolished (leaving many lots empty and unused to this day) along with its rapid transit line. (This neighborhood is frequently a study area in my research outside of Weitzman and a neighborhood I've worked in for 5 years).  Further, District 12 is home to the Fulton Market area which has only recently been one of the most desirable (and expensive) neighborhoods in the entire region and is now home to corporate giants like McDonalds and Google along with dozens of new skyscrapers and other urban renewal projects that came with them.  Interestingly, District 3 sees a large count of actual vacant/abandoned building 311 reports whereas District 12 sees very few.  This implies that there is some other factor impacting burglaries in these two districts than the vacancies studied here.
+
 #### Part 6: Model Evaluation
 - Compare to KDE baseline
 
-#### CHALLENGE TASK: Temporal Validation (2018) *not mandatory, only if you want very strong spatial analytics muscles*
-- Download 2018 crimes https://data.cityofchicago.org/Public-Safety/Crimes-2018/3i3m-jwuy/about_data
-- Be sure to filter for BURGLARIES (FORCED ENTRY only to match the 2017 data)
-- Aggregate 2018 violations to the same fishnet grid
-- Use your 2017 model to predict 2018 counts
-- Calculate temporal validation metrics
-- Compare spatial vs. temporal validation performance
+```{r kde-baseline}
+#| message: false
 
----
+# Convert burglaries to ppp (point pattern) format for spatstat
+burglaries_ppp <- as.ppp(
+  st_coordinates(burglaries),
+  W = as.owin(st_bbox(chicagoBoundary))
+)
+
+# Calculate KDE with 1km bandwidth
+kde_burglaries <- density.ppp(
+  burglaries_ppp,
+  sigma = 1000,  # 1km bandwidth
+  edge = TRUE    # Edge correction
+)
+
+# Convert to terra raster (modern approach, not raster::raster)
+kde_raster <- rast(kde_burglaries)
+
+# Extract KDE values to fishnet cells
+fishnet <- fishnet %>%
+  mutate(
+    kde_value = terra::extract(
+      kde_raster,
+      vect(fishnet),
+      fun = mean,
+      na.rm = TRUE
+    )[, 2]  # Extract just the values column
+  )
+
+cat("✓ Calculated KDE baseline\n")
+```
+
+```{r visualize-kde}
+#| fig-width: 8
+#| fig-height: 6
+
+ggplot() +
+  geom_sf(data = fishnet, aes(fill = kde_value), color = NA) +
+  geom_sf(data = chicagoBoundary, fill = NA, color = "white", linewidth = 1) +
+  scale_fill_viridis_c(
+    name = "KDE Value",
+    option = "plasma"
+  ) +
+  labs(
+    title = "Kernel Density Estimation Baseline",
+    subtitle = "Simple spatial smoothing of burglary locations"
+  ) +
+  theme_vacbldgs()
+```
+
+```{r final-predictions}
+# Fit final model on all data
+final_model <- glm.nb(
+  countBurglaries ~ countVacant + vac_bldgs.nn + 
+    dist_to_hotspot,
+  data = fishnet_model
+)
+
+# Add predictions back to fishnet
+fishnet <- fishnet %>%
+  mutate(
+    prediction_nb = predict(final_model, fishnet_model, type = "response")[match(uniqueID, fishnet_model$uniqueID)]
+  )
+
+# Also add KDE predictions (normalize to same scale as counts)
+kde_sum <- sum(fishnet$kde_value, na.rm = TRUE)
+count_sum <- sum(fishnet$countBurglaries, na.rm = TRUE)
+fishnet <- fishnet %>%
+  mutate(
+    prediction_kde = (kde_value / kde_sum) * count_sum
+  )
+```
+
+```{r compare-models}
+#| fig-width: 12
+#| fig-height: 4
+
+# Create three maps
+p1 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = countBurglaries), color = NA) +
+  scale_fill_viridis_c(name = "Count", option = "plasma", limits = c(0, 15)) +
+  labs(title = "Actual Burglaries") +
+  theme_vacbldgs()
+
+p2 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = prediction_nb), color = NA) +
+  scale_fill_viridis_c(name = "Predicted", option = "plasma", limits = c(0, 15)) +
+  labs(title = "Model Predictions (Neg. Binomial)") +
+  theme_vacbldgs()
+
+p3 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = prediction_kde), color = NA) +
+  scale_fill_viridis_c(name = "Predicted", option = "plasma", limits = c(0, 15)) +
+  labs(title = "KDE Baseline Predictions") +
+  theme_vacbldgs()
+
+p1 + p2 + p3 +
+  plot_annotation(
+    title = "Actual vs. Predicted Burglaries",
+    subtitle = "Does our complex model outperform simple KDE?"
+  )
+```
+
+```{r model-comparison-metrics}
+# Calculate performance metrics
+comparison <- fishnet %>%
+  st_drop_geometry() %>%
+  filter(!is.na(prediction_nb), !is.na(prediction_kde)) %>%
+  summarize(
+    model_mae = mean(abs(countBurglaries - prediction_nb)),
+    model_rmse = sqrt(mean((countBurglaries - prediction_nb)^2)),
+    kde_mae = mean(abs(countBurglaries - prediction_kde)),
+    kde_rmse = sqrt(mean((countBurglaries - prediction_kde)^2))
+  )
+
+comparison %>%
+  pivot_longer(everything(), names_to = "metric", values_to = "value") %>%
+  separate(metric, into = c("approach", "metric"), sep = "_") %>%
+  pivot_wider(names_from = metric, values_from = value) %>%
+  kable(
+    digits = 2,
+    caption = "Model Performance Comparison"
+  ) %>%
+  kable_styling(bootstrap_options = c("striped", "hover"))
+```
+
+```{r prediction-errors}
+#| fig-width: 10
+#| fig-height: 5
+
+# Calculate errors
+fishnet <- fishnet %>%
+  mutate(
+    error_nb = countBurglaries - prediction_nb,
+    error_kde = countBurglaries - prediction_kde,
+    abs_error_nb = abs(error_nb),
+    abs_error_kde = abs(error_kde)
+  )
+
+# Map errors
+p1 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = error_nb), color = NA) +
+  scale_fill_gradient2(
+    name = "Error",
+    low = "#2166ac", mid = "white", high = "#b2182b",
+    midpoint = 0,
+    limits = c(-10, 10)
+  ) +
+  labs(title = "Model Errors (Actual - Predicted)") +
+  theme_vacbldgs()
+
+p2 <- ggplot() +
+  geom_sf(data = fishnet, aes(fill = abs_error_nb), color = NA) +
+  scale_fill_viridis_c(name = "Abs. Error", option = "magma") +
+  labs(title = "Absolute Model Errors") +
+  theme_vacbldgs()
+
+p1 + p2
+```
+##### Part 6 Response:
+In this part, I compare the baseline Kernel Density predictions and the locations of actual burglaries to the Negative Binomial regression predictions.  Comparing the NB regression to the simple KDE predictions allows us to see whether the more complex model beats the simple baseline and whether or not the spatial features added (mean distance to 3 nearest neighbors and distance to hotspot) contribute to better model performance.  The comparison between the two models shows that the Mean Absolute Error (MAE) is higher for the NBM than the KDE (2.44 for NBM vs. 2.06 for KDE) indicating worse performance compared to the simple model.  Additionally, the Root Mean Squared Error (RMSE) is higher for the NBM than the KDE (3.42 vs 2.95).  As such, the added complexity with the NBM is not justified as it is, overall, making the prediction quality worse than the simple KDE model.  Mapping out the absolute errors show significant clusters of error in Woodlawn (District 3), the West Town (District 12) and, visually, the eastern part of District 8.  Interestingly, this model appears to have high clusters of error along very specific corridors in Chicago which, due to the way Chicago is planned where the grid system denotes land use (e.g. every 4 blocks is a retail corridor and every 8 is a major retail corridor), means we can infer some things about these error clusters.  
+
+The cluster for Woodlawn appears to be centered along East 63rd Street and Cottage Grove Avenue.  This is the terminus station for the CTA Green Line elevated rapid transit route (since the unjust demolition of more than 1 mile of the line further east in the 1980s), the cite of a 21st-century demolished public housing complex, and only half a mile from the infamous Parkway Gardens (a.k.a "O-Block") housing complex (which widely claimed to be the most dangerous neighborhood in Chicago).  The errors at the intersection of 63rd / Cottage are interesting as that site is home to Woodlawn's largest 21-st century redevelopment project up to the time that this data was collected (following an equitable transit-oriented development plan around the station that is still spreading outward from this node).
+
+The cluster for West Town is along Division Avenue (a neighborhood known as Wicker Park), which is has become a major tourist destination in the 21st century due to its large concentration of trendy restaurants.  The area is generally considered quite safe (there are often families, dog walkers, and joggers using Division and surrounding streets at all times of day) which is a stark contrast to 63rd/Cottage (which is considered a "no-go" zone for the predominantly white, university-aged, suburban-transplant population of neighboring Hyde Park).  
+
+Finally, the cluster in District 8 (in the Chicago Lawn neighborhood) appears clustered around Western Avenue. This is another major thoroughfare (it's a truck route, the longest street in the entire city, and the center of a new call to build a bus rapid transit line that one local alderman representing the area is pushing for).  The specific part of Chicago Lawn is divided from the West Englewood neighborhood by the CSX Intermodal Facility and the extremely wide right of way running north-south that serves it.  While the area (at least to my knowledge) is not experiencing active gentrification like Woodlawn or Wicker Park, it does appear to have a large Black population along with a lot of industrial land uses (likely due to the railyard).
+
+More research is needed to understand what these error hotspots are exactly being caused by, but there is one very interesting thread that I can see for future research: racial boundaries.  All three of these hotspot areas see dramatic shifts in racial composition due to histories of redlining and gentrification.  Woodlawn is over 95% Black while neighboring Hyde Park is only 28% (40% white).  Wicker Park tracts are 60-90% white whereas neighboring Humboldt Park tracts are ~50% Hispanic (~30% white).  Further, tracts in Chicago Lawn around Western Avenue are as much as 90% Black whereas western tracts in the same neighborhood are 70-90% Hispanic.  While this is an interesting pattern that warrants further investigation, the racial divisions in Chicago are far more widespread (with many even more pronounced examples than these) so there are likely to be even more factors at play.
 
 ## Step 3: Write Your Analysis
 
